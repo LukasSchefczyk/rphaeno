@@ -22,32 +22,27 @@ pathlist <- html %>%
    str_subset("phenology") %>%  
    str_subset("observations") %>%  as_tibble_col(column_name="paths")
 
-pathlist2 <- pathlist[3:4,]
-#Todo
-#map over urls get filelists, merge together to tbl
-
-
-get_file_names_from_url2 <- function(x) {
-   file <- read_html(x) %>%
+get_file_names_from_url <- function(x) {
+   html <- read_html(x)
+   
+   file <- html %>%
       html_elements("a") %>%
       html_attr("href") %>%
-      # str_subset(".txt")  %>%
       str_subset("../", negate = TRUE) %>%
       as_tibble_col(column_name = "file")
    
    
-   meta <- read_html(x) %>%
+   meta <- html %>%
       html_elements("pre") %>%
       html_text2()  %>%
       str_split("\n") %>%
       unlist() %>%
-      #str_subset(">") %>%
-      str_subset("../", negate = TRUE) %>%
-      str_match("\\s\\s*(.*?)\\s*\r") %>%  # match between string1(space \\s) and string2 ("\r")
+      str_subset("../", negate = TRUE) %>% # remove ../ from list
+      str_match("\\s\\s*(.*?)\\s*\r") %>%  # match/get everything between string1(space \\s) and string2 ("\r")
       .[, 2] %>%
       as_tibble_col(column_name = "meta") %>%
       drop_na() %>%
-      separate(meta, c("lm_datum", "size"), sep = "\\s\\s+") %>%
+      separate(meta, c("lm_datum", "size"), sep = "\\s\\s+") %>% 
       mutate(
          lm_datum = dmy_hm(lm_datum),
          size = as.integer(size),
@@ -55,9 +50,12 @@ get_file_names_from_url2 <- function(x) {
       )
    
    bind_cols(file, meta) %>%
-      relocate(path, .before = file)
+      relocate(path, .after = file)
 }
 
 
-filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url2)
-  
+filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
+#ToDo Do i need these three seperate??!
+filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf")) 
+filelistmeta <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) 
+filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf",negate=TRUE)) 
