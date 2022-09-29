@@ -57,10 +57,10 @@ get_file_names_from_url <- function(x) {
       ### period ( historical or recent) / periode 
       ### group  / gruppe
       mutate(relpath=str_replace(path,pattern=basepath,replacement = "")) %>% 
-      mutate(relpath=str_sub(relpath,1,nchar(relpath)-1)) %>% 
-      separate(relpath,c("reporter","group","periode"),sep="/",remove=FALSE) 
-      #suffixpath split into 3 vars , doesnt remain in tbl
-   
+      separate(relpath %>%  str_sub(relpath,1,nchar(relpath)-1),
+               c("reporter","group","periode"),sep="/",remove=FALSE) 
+      #relpath split into 3 vars 
+      #remove last / with str_sub for splitting into 3 instead of 4 groups
 }
 
 
