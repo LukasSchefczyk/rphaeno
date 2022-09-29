@@ -50,8 +50,19 @@ get_file_names_from_url <- function(x) {
       )
    
    bind_cols(file, meta) %>%
-      relocate(path, .after = file)
+      relocate(path, .after = file) %>%
+      
+      ### add columns
+      ### reporter (annual_reporter or immediate reporter) / jahresmelder | sofortmelder
+      ### period ( historical or recent) / periode 
+      ### group  / gruppe
+      mutate(relpath=str_replace(path,pattern=basepath,replacement = "")) %>% 
+      mutate(relpath=str_sub(relpath,1,nchar(relpath)-1)) %>% 
+      separate(relpath,c("reporter","group","periode"),sep="/",remove=FALSE) 
+      #suffixpath split into 3 vars , doesnt remain in tbl
+   
 }
+
 
 
 filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
@@ -59,3 +70,9 @@ filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
 filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf")) 
 filelistmeta <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) 
 filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf",negate=TRUE)) 
+
+
+
+lala <- filelistfull$path[1]
+
+filelistfull  
