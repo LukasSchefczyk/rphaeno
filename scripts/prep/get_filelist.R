@@ -71,8 +71,7 @@ filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf"))
 filelistmeta <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) 
 filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf",negate=TRUE)) 
 
-
-
-lala <- filelistfull$path[1]
-
-filelistfull  
+#
+filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) %>% distinct(file,.keep_all = TRUE)
+#remove duplicates with same filename  
+filelist <- filelistfull %>%   distinct(file,.keep_all = TRUE) 
