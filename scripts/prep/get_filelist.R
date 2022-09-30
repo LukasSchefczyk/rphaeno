@@ -56,14 +56,16 @@ get_file_names_from_url <- function(x) {
       ### reporter (annual_reporter or immediate reporter) / jahresmelder | sofortmelder
       ### period ( historical or recent) / periode 
       ### group  / gruppe
-      mutate(relpath=str_replace(path,pattern=basepath,replacement = "")) %>% 
-      separate(relpath %>%  str_sub(relpath,1,nchar(relpath)-1),
-               c("reporter","group","periode"),sep="/",remove=FALSE) 
+      mutate(relpath=str_replace(path,pattern=basepath,replacement = "")) %>%
+      mutate(relpath2=str_sub(relpath,start=1,end=nchar(relpath)-1)) %>% 
+      separate(relpath2,c("reporter","group","periode"),sep="/",remove=FALSE) %>% 
+      select(-relpath2)
       #relpath split into 3 vars 
       #remove last / with str_sub for splitting into 3 instead of 4 groups
 }
 
 
+filelistfull2 <- map_dfr(pathlist$paths[2:3], get_file_names_from_url)
 
 filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
 #ToDo Do i need these three seperate??!
