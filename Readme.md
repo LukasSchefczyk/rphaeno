@@ -1,3 +1,6 @@
+
+# WIP - Work in Progress - !
+
 # Readme de
 
 Skripte zum runter- und einladen von (zunaechst erstmal) Deutscher Wetterdienst DWD Phaenologie Daten und Plotten dieser Daten 

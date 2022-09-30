@@ -65,7 +65,7 @@ get_file_names_from_url <- function(x) {
 }
 
 
-filelistfull2 <- map_dfr(pathlist$paths[2:3], get_file_names_from_url)
+#filelistfull2 <- map_dfr(pathlist$paths[2:3], get_file_names_from_url)
 
 filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
 #ToDo Do i need these three seperate??!
