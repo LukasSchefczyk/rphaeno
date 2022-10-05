@@ -25,7 +25,7 @@ download_files <- function (df) {
 }
 
 download_files(filelist)
-download_files(filelistmeta)
+#download_files(filelistmeta)
 
 #df <- filelistfull %>%  slice(1:2)
 #safe_download <- safely(~ download.file(.x , .y, mode = "wb"))
