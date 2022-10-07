@@ -7,14 +7,14 @@ filelistmeta_distinct <- filelistmeta %>%
   distinct(file,.keep_all = TRUE) %>% 
   mutate(tablename=str_replace_all(file,c("PH_Beschreibung_"="",".txt"="")),
          dbname=dbname) 
-  
+
 
 
 #All non Phasendefinition files 
 filelistmeta_distinct %>%
   filter(str_detect(tablename, 'Phasendefinition',negate = TRUE)) %>% 
   pwalk(function(...) { 
-
+    
     df <- tibble(...)
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
     indexes <- switch(df$tablename,
@@ -30,7 +30,7 @@ filelistmeta_distinct %>%
                       "Pflanze" = list("objekt_id"),
                       "Phase" =list("phasen_id","phase"),
                       list("objekt_id","phasen_id")
-                      )
+    )
     
     #load in table "raw" 
     lala <- read_csv2(file=df$filepath,col_names = TRUE,locale = locale(encoding = "ISO-8859-1"),
@@ -57,9 +57,9 @@ filelistmeta_distinct %>%
             indexes = indexes
     )
     DBI::dbDisconnect(con)
-
-}
-)
+    
+  }
+  )
 
 
 
@@ -71,12 +71,12 @@ for ( reportertype in c("Jahresmelder","Sofortmelder","melder") ) {
                     "Jahresmelder" = "Phasendefinition_Jahresmelder",
                     "Sofortmelder" = "Phasendefinition_Sofortmelder",
                     "melder"       = "Phasendefinition"
-                   )
-    
+  )
+  
   data <- filelistmeta_distinct %>%
     filter(str_detect(tablename, abfrage ,negate = FALSE)) %>% select(filepath) %>%  
     map(function(x) read_csv2(file=x,col_names = TRUE,locale = locale(encoding = "ISO-8859-1"),
-              col_select=-contains(c("...","eor")),show_col_types = FALSE)) %>% 
+                              col_select=-contains(c("...","eor")),show_col_types = FALSE)) %>% 
     reduce(rbind) %>%  
     #cleaning tableheaders to all to lowercase and remove whitespace between words
     #remove whitespaces in columnnames 
@@ -92,23 +92,100 @@ for ( reportertype in c("Jahresmelder","Sofortmelder","melder") ) {
           indexes = indexes
   )
   
-
+  
 }
 DBI::dbDisconnect(con)  
 
 
 ##Notizen in extra Tabelle laden 
-#TODO ANY_OF Funktioniert nicht in der PIPE 
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
-filelistdaten %>%  
+notizen <- filelistdaten %>%  
   filter(str_detect(file,"Notiz")) %>%  
   filter(str_detect(file,"Spezifizierung",negate = TRUE)) %>% 
   transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
-  map(function(x) {read_csv2(file=x,col_names = TRUE,locale = locale(encoding = "ISO-8859-1"),
-                            col_select=-contains(c("...","eor")),show_col_types = FALSE) %>% 
-        rename(any_of(c(qualitaetsniveau="QUALITAETS_NIVEAU",qualitaetsniveau="QUALITAETSNIVEAU")))
-      }) %>% 
-  reduce(rbind)
+  map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
+                             col_select=-contains(c("...","eor")),show_col_types = FALSE,
+                             col_names=c("stations_id","referenzjahr", "qualitaetsniveau", "objekt_id", 
+                                         "objekt", "phasen_id", "phase", "notizen","eor","...1"))}) %>% 
+  
+  reduce(rbind) %>% 
+  #fix type of dbl column to int column 
+  mutate(across(where(is.double), as.integer)) 
+
+copy_to(con, notizen, "Notizen",
+        temporary = FALSE,
+        overwrite=TRUE,
+        indexes = indexes
+)
+
+
+### Spezifizierung notiz
+spezi_notiz <- filelistdaten %>%  
+  filter(str_detect(file,"Notiz")) %>%  
+  filter(str_detect(file,"Spezifizierung",negate = FALSE)) %>% 
+  transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
+  map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
+                             col_select=-contains(c("...","eor")),show_col_types = FALSE,
+                             col_names=c("stations_id","referenzjahr", "objekt_id", 
+                                         "objekt", "sorte_id","sorte", "notizen","eor","...1"))}) %>% 
+  
+  reduce(rbind) %>% 
+  #fix type of dbl column to int column 
+  mutate(across(where(is.double), as.integer))
+
+
+copy_to(con, spezi_notiz, "Spezifizierung_Notizen",
+        temporary = FALSE,
+        overwrite=TRUE,
+        indexes = c("stations_id","objekt_id","sorte_id")
+)
+
+###Spezifizierung
+tabname <- filelistdaten %>%  
+  filter(str_detect(file,"Spezifizierung")) %>%  
+  filter(str_detect(file,"Notiz",negate = TRUE)) %>% 
+  select(file) %>%  
+  mutate(file=str_replace(file,".txt",""),file = map(str_split(file, "_"), tail, 2)) %>%
+  unnest_wider(file, names_repair = ~paste0("dir", seq_along(.) - 1)) %>%  
+  transmute(tabname=glue("{dir0}_{dir1}"))
+
+###TODO  über die 4 Spezfizerungsdateien loopen und in tabnames in die db schreiben
+#spezi <- 
+filelistdaten %>%  
+  filter(str_detect(file,"Spezifizierung")) %>%  
+  filter(str_detect(file,"Notiz",negate = TRUE)) %>% 
+  transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
+  bind_cols(tabname) %>%
+  mutate(dbname=dbname)%>% 
+  slice(1) %>% 
+  ##########  FIX ME bleibt haengen
+  pwalk(function(...) {
+    
+    df <- tibble(...)
+    
+    lala <- 
+      read_csv2(
+        file = df$filepath,
+        skip = 0,
+        locale = locale(encoding = "ISO-8859-1"),
+        col_select = -contains(c("...", "eor")),
+        show_col_types = FALSE,
+        col_names = TRUE
+      ) %>%
+      mutate(across(where(is.double), as.integer)) %>%
+      #remove whitespaces in columnnames
+      rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+    
+    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+    copy_to(con, lala, df$tabname,
+            temporary = FALSE,
+            overwrite=TRUE,
+            indexes = c("stations_id","objekt_id","sorte_id")
+    )
+    
+  } )  
+### FIX ME ^^^^^^^^
+
 
 
 
