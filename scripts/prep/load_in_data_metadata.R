@@ -33,13 +33,14 @@ filelistmeta_distinct %>%
     )
     
     #load in table "raw" 
-    lala <- read_csv2(file=df$filepath,col_names = TRUE,locale = locale(encoding = "ISO-8859-1"),
-                      col_select=-contains(c("...","eor")),show_col_types = FALSE) %>% 
+    lala <- read_delim(file=df$filepath,col_names = TRUE,locale = locale(encoding = "ISO-8859-1",decimal_mark = "."),
+                       col_select=-contains(c("...","eor")),show_col_types = FALSE,delim=";",trim_ws = TRUE) %>%
       #cleaning tableheaders to all to lowercase and remove whitespace between words
       #remove whitespaces in columnnames 
       rename_with(~tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%  
       #fix type of dbl column to int column 
-      mutate(across(where(is.double), as.integer))
+      mutate(across(c(where(is.double),-starts_with("geograph.")), as.integer)) 
+    
     
     if(df$tablename=="Phase") {
       lala <- lala %>%  rename(phasen_id=phase_id)
@@ -47,9 +48,11 @@ filelistmeta_distinct %>%
     if(df$tablename =="Pflanze") {
       #Fix for data in 2 rows ... WTF DWD :D
       lala <- lala %>%  mutate(objekt_latein=lead(objekt_id,1)) %>%
-        drop_na() %>% 
-        mutate(objekt_id=as.integer(objekt_id))
+        drop_na() #%>% 
+      # mutate(objekt_id=as.integer(objekt_id))
     }
+    
+    lala <- lala %>%  mutate(across(ends_with(c("_id","_code")),as.integer))
     
     copy_to(con, lala, df$tablename,
             temporary = FALSE,
@@ -57,7 +60,6 @@ filelistmeta_distinct %>%
             indexes = indexes
     )
     DBI::dbDisconnect(con)
-    
   }
   )
 

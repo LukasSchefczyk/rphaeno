@@ -71,7 +71,7 @@ filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
 #ToDo Do i need these three seperate??!
 filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf")) 
 filelistmeta <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) 
-filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf",negate=TRUE)) 
+filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf|Spezifizierung|Notiz",negate=TRUE)) 
 
 #
 filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) %>% distinct(file,.keep_all = TRUE)
