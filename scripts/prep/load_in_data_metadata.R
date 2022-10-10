@@ -117,7 +117,7 @@ copy_to(con, notizen, "Notizen",
         overwrite=TRUE,
         indexes = indexes
 )
-
+DBI::dbDisconnect(con)  
 
 ### Spezifizierung notiz
 spezi_notiz <- filelistdaten %>%  
@@ -139,6 +139,8 @@ copy_to(con, spezi_notiz, "Spezifizierung_Notizen",
         overwrite=TRUE,
         indexes = c("stations_id","objekt_id","sorte_id")
 )
+DBI::dbDisconnect(con) 
+
 
 ###Spezifizierung
 tabname <- filelistdaten %>%  
@@ -150,15 +152,17 @@ tabname <- filelistdaten %>%
   transmute(tabname=glue("{dir0}_{dir1}"))
 
 ###TODO  über die 4 Spezfizerungsdateien loopen und in tabnames in die db schreiben
+# Pwalk funktioniert nicht
 #spezi <- 
+if(0) {
 filelistdaten %>%  
   filter(str_detect(file,"Spezifizierung")) %>%  
   filter(str_detect(file,"Notiz",negate = TRUE)) %>% 
   transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
   bind_cols(tabname) %>%
   mutate(dbname=dbname)%>% 
-  slice(1) %>% 
-  ##########  FIX ME bleibt haengen
+  #slice(1) %>% 
+  ##########  FIX ME bleibt haengen , oder auch nicht WTF... manchmal gehts manchmal nicht .... 
   pwalk(function(...) {
     
     df <- tibble(...)
@@ -182,10 +186,48 @@ filelistdaten %>%
             overwrite=TRUE,
             indexes = c("stations_id","objekt_id","sorte_id")
     )
-    
+    DBI::dbDisconnect(con) 
   } )  
 ### FIX ME ^^^^^^^^
+}### For futureme to fix maybe ... have fun
+
+spezi <- filelistdaten %>%  
+  filter(str_detect(file,"Spezifizierung")) %>%  
+  filter(str_detect(file,"Notiz",negate = TRUE)) %>% 
+  transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
+  bind_cols(tabname) %>%
+  mutate(dbname=dbname)
 
 
-
-
+read_spezi <- function(...) {
+  
+  df <- tibble(...)
+  
+  lala <- 
+    read_csv2(
+      file = df$filepath,
+      skip = 1,
+      locale = locale(encoding = "ISO-8859-1"),
+      col_select = -contains(c("...", "eor")),
+      show_col_types = FALSE,
+      col_names = TRUE
+    ) %>%
+    mutate(across(where(is.double), as.integer)) %>%
+    #remove whitespaces in columnnames
+    rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+  
+  con <- DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+  copy_to(con, lala, df$tabname,
+          temporary = FALSE,
+          overwrite=TRUE,
+          indexes = c("stations_id","objekt_id","sorte_id")
+  )
+  DBI::dbDisconnect(con) 
+}
+## Obst spezifizierung weglassen fürs erste...zu groß  für vm hier (?!)
+#for (i in length(spezi[[1]]) ) {
+ for (i in c(1,2,4)) {
+   read_spezi(spezi[i,])
+  
+ }
+rm(list=c("notizen","spezi","spezi_notiz","tabname"))
