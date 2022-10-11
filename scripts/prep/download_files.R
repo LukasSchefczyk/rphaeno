@@ -5,6 +5,10 @@
 #variable to filter by plant to reduce download
 #variable to filter by reporter
 #variable to filter periode?? or just whole ts as option and user should crop it 
+#check if data is already downloaded
+#check wether newer data is available, 
+#check if database is already there, if overwrite from user
+#
 
 download_files <- function (df) {
   #define safe download function so that map doesn't stop when deadlink
@@ -24,9 +28,5 @@ download_files <- function (df) {
   
 }
 
-download_files(filelist)
+#download_files(filelist)
 #download_files(filelistmeta)
-
-#df <- filelistfull %>%  slice(1:2)
-#safe_download <- safely(~ download.file(.x , .y, mode = "wb"))
-#df %>% map2(glue("{path}{file}"), glue("{relpath}{file}"), safe_download)

@@ -72,8 +72,8 @@ filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
 filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf")) 
 filelistmeta <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) 
 filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf|Spezifizierung|Notiz",negate=TRUE)) 
-
+filelistspezi <- filelistfull %>%  filter(str_detect(file,"Spezifizierung|Notiz")) 
 #
 filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) %>% distinct(file,.keep_all = TRUE)
 #remove duplicates with same filename  
-filelist <- filelistfull %>%   distinct(file,.keep_all = TRUE) 
+filelist <- filelistfull %>%   distinct(file,.keep_all = TRUE)

@@ -2,6 +2,8 @@ library(dbplyr)
 
 temp_dir="temp/"
 dbname <- "temp/dbtest.sqlite3"
+###con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+
 filelistmeta_distinct <- filelistmeta %>%
   mutate(filepath=glue("{temp_dir}{relpath}{file}"))  %>% 
   distinct(file,.keep_all = TRUE) %>% 
@@ -16,7 +18,7 @@ filelistmeta_distinct %>%
   pwalk(function(...) { 
     
     df <- tibble(...)
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
     indexes <- switch(df$tablename,
                       "Phaenologie_Besonderheiten_Zeitreihen" = list("objekt_id","phasen_id"),
                       "Phaenologie_Qualitaetsbyte" = list("qualitaetsbyte"),
@@ -63,9 +65,23 @@ filelistmeta_distinct %>%
   }
   )
 
+### Combine Stationen into Stationen Table 
+con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+Jahresmelder <- tbl(con, "Phaenologie_Stationen_Jahresmelder") %>%  collect()
+Sofortmelder <- tbl(con, "Phaenologie_Stationen_Sofortmelder") %>%  collect()
+Stationen <- rbind(Jahresmelder,Sofortmelder)  %>%  distinct()
+copy_to(con, Stationen, "Stationen",
+        temporary = FALSE,
+        overwrite=TRUE,
+        indexes = list("stations_id","stationsname","bundesland",
+                       "naturraumgruppe_code","naturraumgruppe",
+                       "naturraum_code","naturraum" ))
+DBI::dbDisconnect(con) 
+rm(list=c("Jahresmelder","Sofortmelder","Stationen"))
 
 
-con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+
+con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
 # Combine Phasendefinition Metadata into one df per reporter and both into Phasendefinition 
 indexes <- list("objekt_id","phasen_id")
 for ( reportertype in c("Jahresmelder","Sofortmelder","melder") ) {
@@ -100,8 +116,8 @@ DBI::dbDisconnect(con)
 
 
 ##Notizen in extra Tabelle laden 
-con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
-notizen <- filelistdaten %>%  
+con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+notizen <- filelistspezi  %>%  
   filter(str_detect(file,"Notiz")) %>%  
   filter(str_detect(file,"Spezifizierung",negate = TRUE)) %>% 
   transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
@@ -122,7 +138,8 @@ copy_to(con, notizen, "Notizen",
 DBI::dbDisconnect(con)  
 
 ### Spezifizierung notiz
-spezi_notiz <- filelistdaten %>%  
+con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+spezi_notiz <- filelistspezi %>%  
   filter(str_detect(file,"Notiz")) %>%  
   filter(str_detect(file,"Spezifizierung",negate = FALSE)) %>% 
   transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
@@ -145,7 +162,7 @@ DBI::dbDisconnect(con)
 
 
 ###Spezifizierung
-tabname <- filelistdaten %>%  
+tabname <- filelistspezi %>%  
   filter(str_detect(file,"Spezifizierung")) %>%  
   filter(str_detect(file,"Notiz",negate = TRUE)) %>% 
   select(file) %>%  
@@ -182,7 +199,7 @@ filelistdaten %>%
       #remove whitespaces in columnnames
       rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
     
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+    con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
     copy_to(con, lala, df$tabname,
             temporary = FALSE,
             overwrite=TRUE,
@@ -193,7 +210,7 @@ filelistdaten %>%
 ### FIX ME ^^^^^^^^
 }### For futureme to fix maybe ... have fun
 
-spezi <- filelistdaten %>%  
+spezi <- filelistspezi %>%  
   filter(str_detect(file,"Spezifizierung")) %>%  
   filter(str_detect(file,"Notiz",negate = TRUE)) %>% 
   transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
@@ -212,13 +229,15 @@ read_spezi <- function(...) {
       locale = locale(encoding = "ISO-8859-1"),
       col_select = -contains(c("...", "eor")),
       show_col_types = FALSE,
-      col_names = TRUE
+      col_names = TRUE,
+      n_max = 10000000
+      
     ) %>%
     mutate(across(where(is.double), as.integer)) %>%
     #remove whitespaces in columnnames
     rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
   
-  con <- DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
   copy_to(con, lala, df$tabname,
           temporary = FALSE,
           overwrite=TRUE,
@@ -226,10 +245,10 @@ read_spezi <- function(...) {
   )
   DBI::dbDisconnect(con) 
 }
-## Obst spezifizierung weglassen fürs erste...zu groß  für vm hier (?!)
-#for (i in length(spezi[[1]]) ) {
- for (i in c(1,2,4)) {
+## Obst spezifizierung gefixt mit n_max wert statt default Inf
+for (i in length(spezi[[1]]) ) {
    read_spezi(spezi[i,])
   
  }
+
 rm(list=c("notizen","spezi","spezi_notiz","tabname"))

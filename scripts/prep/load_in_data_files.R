@@ -25,5 +25,6 @@ copy_to(con, data, "Daten",
         temporary = FALSE,
         overwrite=TRUE,
         indexes = indexes
-)
-DBI::dbDisconnect(con)  
+        )
+DBI::dbDisconnect(con)
+rm(data)
