@@ -1,10 +1,12 @@
 ## Joining Datatables
 
-con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/dbtest.sqlite3" )
 
 dbListTables(con)
 
+con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/temp.sqlite3")
 
+dbListTables(con2)
 
 
 Stationen <- tbl(con, "Stationen") 

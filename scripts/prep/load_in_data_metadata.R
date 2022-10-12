@@ -246,7 +246,7 @@ read_spezi <- function(...) {
   DBI::dbDisconnect(con) 
 }
 ## Obst spezifizierung gefixt mit n_max wert statt default Inf
-for (i in length(spezi[[1]]) ) {
+for (i in 1:length(spezi[[1]]) ) {
    read_spezi(spezi[i,])
   
  }
