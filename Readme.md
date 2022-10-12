@@ -14,14 +14,18 @@ scripts to download and load phenology data from (for now) German Weather Servic
 
 
 ### Geodata 
-####vg2500 Verwaltungsgrenzen
+#### vg2500 Verwaltungsgrenzen
 [© GeoBasis-DE / BKG 2021](http://www.bkg.bund.de)
+
 https://gdz.bkg.bund.de/index.php/default/digitale-geodaten/verwaltungsgebiete/verwaltungsgebiete-1-2-500-000-stand-31-12-vg2500-12-31.html
 
-####Naturraum
+#### Naturraum
 WFS Bundesamt für Naturschutz
-https://geoportal.de/Info/325bfe9a-21f0-4fc4-9dae-a8feb4668a08
+
 https://geodienste.bfn.de/ogc/wfs/gliederungen?SERVICE=WFS&REQUEST=GetCapabilities
+
+https://geoportal.de/Info/325bfe9a-21f0-4fc4-9dae-a8feb4668a08
+
 
 Layers: UTM32N EPSG:25832 
 
