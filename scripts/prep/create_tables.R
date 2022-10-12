@@ -29,7 +29,7 @@ create_megaframe <- function () {
 }
 megaframe <- create_megaframe()
 
-Daten_rlp <- megaframe %>% filter(bundesland=="Rheinland-Pfalz") %>% collect()
+Daten_rlp <- megaframe %>% filter(bundesland %in% c("Rheinland-Pfalz")) %>% collect()
 
 copy_to(con, daten_rlp, "daten_rlp",
         temporary = FALSE,
