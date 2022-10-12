@@ -181,11 +181,17 @@ if(downloaddata) download_files(filelist)
     )
   
   
-  ### Combine Stationen into Stationen Table 
+  #### Combine Stationen into Stationen Table ####  
   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
   Jahresmelder <- tbl(con, "Phaenologie_Stationen_Jahresmelder") %>%  collect()
   Sofortmelder <- tbl(con, "Phaenologie_Stationen_Sofortmelder") %>%  collect()
-  Stationen <- rbind(Jahresmelder,Sofortmelder)  %>%  distinct()
+  #Stationen <- rbind(Jahresmelder,Sofortmelder)  %>%  distinct(stations_id,.keep_all = TRUE)
+  #adding Meldertyp to Stationen table
+  station_s_only <-anti_join(Sofortmelder,Jahresmelder,by="stations_id") %>% mutate(Melder="Sofortmelder")
+  station_j_only <-anti_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(Melder="Jahresmelder") 
+  station_sj <- semi_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(Melder="Beides")
+  Stationen <- bind_rows(station_s_only,station_sj,station_j_only) %>%  arrange(stations_id)
+  
   copy_to(con, Stationen, "Stationen",
           temporary = FALSE,
           overwrite=TRUE,
@@ -335,7 +341,7 @@ if(downloaddata) download_files(filelist)
   }
   
 
-#### load in Data ####   
+#### Load in Data ####   
   
   data <- filelistdaten %>% mutate(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     select(filepath) %>%  

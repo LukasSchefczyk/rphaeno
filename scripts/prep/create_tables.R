@@ -9,11 +9,18 @@ con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/temp.sqlite3")
 dbListTables(con2)
 
 
-Stationen <- tbl(con, "Stationen") 
-Pflanze <- tbl(con, "Pflanze") 
-Daten <- tbl(con,"Daten")
-Phasendefinition <- tbl(con,"Phasendefinition")
+Stationen <- tbl(con2, "Stationen") 
+Pflanze <- tbl(con2, "Pflanze") 
+Daten <- tbl(con2,"Daten")
+Phasendefinition <- tbl(con2,"Phasendefinition")
+Phasen <- Phasendefinition %>%  select(phasen_id,phase) %>% arrange(phasen_id) %>% distinct() %>%  collect() 
 
+station_s <- tbl(con2,"Phaenologie_Stationen_Sofortmelder")
+station_j <- tbl(con2,"Phaenologie_Stationen_Jahresmelder")
+station_s_only <-anti_join(station_s,station_j,by="stations_id") %>% mutate(Melder="Sofortmelder") %>% collect()
+station_j_only <-anti_join(station_j,station_s,by="stations_id") %>% mutate(Melder="Jahresmelder") %>% collect()
+station_sj <- semi_join(station_j,station_s,by="stations_id") %>% mutate(Melder="Beides") %>% collect()
+lala <- bind_rows(station_s_only,station_sj,station_j_only)
 
 create_megaframe <- function () {
   #con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
