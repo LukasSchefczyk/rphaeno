@@ -1,6 +1,8 @@
 ## Create Phenodatabase from DWD function
 
-create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",plant=NULL,downloaddata=TRUE) {
+create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",
+                             plant=NULL,downloaddata=TRUE,meta_spezifizierung=TRUE,meta_beschreibung=TRUE,
+                             keepdldata=TRUE) {
 #### libraries ####   
   require(tidyverse)
   require(rvest)
@@ -10,8 +12,9 @@ create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",plant=N
   require(DBI)
   require(dbplyr)
   
-  
-  if(!dir.exists(temp_dir)) dir.create(temp_dir,recursive = TRUE)
+  if(!is.atomic(plant)) stop("plant should be simple character vector")
+  if( !dbname %>% str_detect("sqlite") ) stop("dbname should be sqlite3 database and end with .sqlite3")
+  if( !dir.exists(temp_dir) ) dir.create(temp_dir,recursive = TRUE)
   
   
 #### get filelist ####
@@ -70,13 +73,28 @@ create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",plant=N
   #get filelist 
   filelistfull <- map_dfr(pathlist$paths, get_file_names_from_url)
   
-  #ToDo Do i need these three seperate??!
-  filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf")) 
+  #Generate Filelists for each task in advance
+   
   filelistmeta <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung")) 
-  filelistdaten <- filelistfull %>%  filter(str_detect(file,"PH_Beschreibung|.pdf|Spezifizierung|Notiz",negate=TRUE)) 
-  filelistspezi <- filelistfull %>%  filter(str_detect(file,"Spezifizierung|Notiz")) 
-  #remove duplicates with same filename  
-  filelist <- filelistfull %>%   distinct(file,.keep_all = TRUE)
+  filelistdaten <- filelistfull %>%  
+    filter(str_detect(file,"PH_Beschreibung|.pdf|Spezifizierung|Notiz",negate=TRUE)) %>% 
+    filter(str_detect(file,paste0(plant,collapse = "|")))
+  filelistspezi <- filelistfull %>%  filter(str_detect(file,"Spezifizierung|Notiz"))
+  notizen <- filelistspezi  %>%  
+    filter(str_detect(file,"Notiz")) %>%
+    #Spezifzierungsnotizen rauswerfen
+    filter(str_detect(file,"Spezifizierung",negate = TRUE))
+  #gruppen <- filelistdaten %>%  distinct(group)
+  filelistbeschreibung <- filelistfull %>%  filter(str_detect(file,".pdf")) %>% 
+    semi_join(filelistdaten %>%  distinct(group),by="group")
+  #remove duplicates with same filename 
+  #build filelist to download from above to apply filtering , plant=NULL dont effect filtering 
+  #filelist <- filelistfull %>%   distinct(file,.keep_all = TRUE) #full filelist download
+  filelist <- bind_rows(filelistmeta,
+                        filelistdaten,
+                        if(meta_spezifizierung) filelistspezi else NULL,
+                        notizen,
+                        if(meta_beschreibung) filelistbeschreibung else NULL) %>%  distinct(file,.keep_all=TRUE)
   
   
 #### download files 
@@ -241,9 +259,7 @@ if(downloaddata) download_files(filelist)
   
   ##Notizen in extra Tabelle laden 
   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
-  notizen <- filelistspezi  %>%  
-    filter(str_detect(file,"Notiz")) %>%  
-    filter(str_detect(file,"Spezifizierung",negate = TRUE)) %>% 
+  notizendb <- notizen %>% 
     transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
                                col_select=-contains(c("...","eor")),show_col_types = FALSE,
@@ -255,7 +271,7 @@ if(downloaddata) download_files(filelist)
     #fix type of dbl column to int column 
     mutate(across(where(is.double), as.integer)) 
   
-  copy_to(con, notizen, "Notizen",
+  copy_to(con, notizendb, "Notizen",
           temporary = FALSE,
           overwrite=TRUE,
           indexes = indexes
@@ -263,7 +279,7 @@ if(downloaddata) download_files(filelist)
   DBI::dbDisconnect(con)    
   
   
-  
+  if(meta_spezifizierung) {
   ### Spezifizierung notiz
   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
   spezi_notiz <- filelistspezi %>%  
@@ -339,7 +355,7 @@ if(downloaddata) download_files(filelist)
     read_spezi(spezi[i,])
     
   }
-  
+  }#if(meta_spezifizierung)
 
 #### Load in Data ####   
   
@@ -367,10 +383,18 @@ if(downloaddata) download_files(filelist)
   
   
   
+#### Deleting Temp Data #### 
+if(!keepdldata) {
+  unlink(temp_dir, recursive = TRUE)
+}
+# Cleaning Ram 
+invisible(gc())
   
 }#create_database 
 
 create_database(downloaddata = FALSE)
+
+create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
 
 
 
