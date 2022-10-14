@@ -6,4 +6,6 @@ library(sf)
 gfile <- system.file("data/Naturraum_Grenzen_DE.gpkg", package = "sf", mustWork = TRUE)
 gfile <- "data/Naturraum_Grenzen_DE.gpkg"
 sf::st_layers(gfile)
-read_sf("data/Naturraum_Grenzen_DE.gpkg")
+bundesland <- read_sf("data/Naturraum_Grenzen_DE.gpkg","bundesland")
+nrg <- read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe")
+nr <- read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraum")

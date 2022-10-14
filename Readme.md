@@ -34,13 +34,11 @@ Naturraumgruppe -> Dissolve auf Gruppe_der_Haupteinheiten Layer , Namen und stri
 
 Naturraum -> Haupteinheiten Layer , Namen angepasst und string to int Nummer (ORD3)  und *10 damit es vierstellig ist wie DWD Nummern... 
 
-vg_kreis_raw -> Original Kreis Daten 
+landkreis -> mit Ländergrenzen (bundesland) vereinigt und auf wesentliche Attributspalten begrenzt
 
-vg_kreis -> mit Ländergrenzen (GEN_2) vereinigt und auf wesentliche Attributspalten begrenzt
+bundesland -> Ländergrenzen , Bodensee dissolved in BY und BW, Küstenpolygone entfernt
 
-vg_land -> Ländergrenzen , Bodensee dissolved in BY und BW, Küstenpolygone entfernt
-
-vg_staat -> vg_land dissolved -> Deutschland Grenze ohne Küstenpolygone
+staatsgrenze -> vg_land dissolved -> Deutschland Grenze ohne Küstenpolygone
 
 
 
