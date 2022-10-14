@@ -205,10 +205,12 @@ if(downloaddata) download_files(filelist)
   Sofortmelder <- tbl(con, "Phaenologie_Stationen_Sofortmelder") %>%  collect()
   #Stationen <- rbind(Jahresmelder,Sofortmelder)  %>%  distinct(stations_id,.keep_all = TRUE)
   #adding Meldertyp to Stationen table
-  station_s_only <-anti_join(Sofortmelder,Jahresmelder,by="stations_id") %>% mutate(Melder="Sofortmelder")
-  station_j_only <-anti_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(Melder="Jahresmelder") 
-  station_sj <- semi_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(Melder="Beides")
-  Stationen <- bind_rows(station_s_only,station_sj,station_j_only) %>%  arrange(stations_id)
+  station_s_only <-anti_join(Sofortmelder,Jahresmelder,by="stations_id") %>% mutate(melder="Sofortmelder")
+  station_j_only <-anti_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(melder="Jahresmelder") 
+  station_sj <- semi_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(melder="Beides")
+  Stationen <- bind_rows(station_s_only,station_sj,station_j_only) %>% 
+    arrange(stations_id) %>%  rename(lat=geograph.breite,lon=geograph.laenge) %>% 
+    mutate(datum_stationsaufloesung=ymd(dmy(datum_stationsaufloesung)))
   
   copy_to(con, Stationen, "Stationen",
           temporary = FALSE,
@@ -371,7 +373,8 @@ if(downloaddata) download_files(filelist)
     #remove whitespaces in columnnames 
     rename_with(~tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%  
     #fix type of dbl column to int column 
-    mutate(across(where(is.double), as.integer)) 
+    mutate(across(where(is.double), as.integer),
+           eintrittsdatum = ymd(eintrittsdatum)) 
   #%>%  
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
   copy_to(con, data, "Daten",
