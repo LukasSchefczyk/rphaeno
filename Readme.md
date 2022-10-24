@@ -98,3 +98,7 @@ c("beere") würde bspw. Brombeere Himbeere Erdbeere Johannisbeere Rote Johannisb
 - Phaenologie_Besonderheiten_Zeitreihen
 - Phaenologie_Qualitaetsbyte
 - Phaenologie_Qualitaetsniveau
+
+
+#### Anmerkungen zu Tabellen/Spalten
+objekt_latein/pflanze_latein  manche "Pflanzen" wie Dauergrünland haben keinen Lateinischen Namen und werden mit ------- eingetragen  (eventuell fixen auf NA ?!?)

@@ -135,7 +135,13 @@ if(downloaddata) download_files(filelist)
 
   
 #### Load in Metadata Files ####
+column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
+                     pflanze_englisch ="objekt_englisch",pflanze_latein="objekt_latein",
+                     phase_id = "phasen_id",refjahr="ReferenzJahr",
+                     lat="geograph.breite",lon="geograph.laenge")
   
+  
+    
   filelistmeta_distinct <- filelistmeta %>%
     mutate(filepath=glue("{temp_dir}{relpath}{file}"))  %>% 
     distinct(file,.keep_all = TRUE) %>% 
@@ -151,7 +157,7 @@ if(downloaddata) download_files(filelist)
       df <- tibble(...)
       con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
       indexes <- switch(df$tablename,
-                        "Phaenologie_Besonderheiten_Zeitreihen" = list("objekt_id","phasen_id"),
+                        "Phaenologie_Besonderheiten_Zeitreihen" = list("pflanze_id","phase_id"),
                         "Phaenologie_Qualitaetsbyte" = list("qualitaetsbyte"),
                         "Phaenologie_Qualitaetsniveau" = list("qualitaetsniveau"),
                         "Phaenologie_Stationen_Jahresmelder" = list("stations_id","stationsname","bundesland",
@@ -160,9 +166,9 @@ if(downloaddata) download_files(filelist)
                         "Phaenologie_Stationen_Sofortmelder" = list("stations_id","stationsname","bundesland",
                                                                     "naturraumgruppe_code","naturraumgruppe",
                                                                     "naturraum_code","naturraum" ),
-                        "Pflanze" = list("objekt_id"),
-                        "Phase" =list("phasen_id","phase"),
-                        list("objekt_id","phasen_id")
+                        "Pflanze" = list("pflanze_id"),
+                        "Phase" =list("phase_id","phase"),
+                        list("objekt_id","phase_id")
       )
       
       #load in table "raw" 
@@ -177,9 +183,9 @@ if(downloaddata) download_files(filelist)
         mutate(across(c(where(is.double),-starts_with("geograph.")), as.integer)) 
       
       
-      if(df$tablename=="Phase") {
-        lala <- lala %>%  rename(phasen_id=phase_id)
-      }
+      #if(df$tablename=="Phase") {
+      #  lala <- lala %>%  rename(phasen_id=phase_id)
+      #}
       if(df$tablename =="Pflanze") {
         #Fix for data in 2 rows ... WTF DWD :D
         lala <- lala %>%  mutate(objekt_latein=lead(objekt_id,1)) %>%
@@ -187,7 +193,10 @@ if(downloaddata) download_files(filelist)
         # mutate(objekt_id=as.integer(objekt_id))
       }
       
-      lala <- lala %>%  mutate(across(ends_with(c("_id","_code")),as.integer))
+      #change type to int and rename columnnames 
+        lala <- lala %>%  
+        mutate(across(ends_with(c("_id","_code")),as.integer)) %>% 
+        rename(any_of(column_fix_names))
       
       copy_to(con, lala, df$tablename,
               temporary = FALSE,
@@ -209,8 +218,9 @@ if(downloaddata) download_files(filelist)
   station_j_only <-anti_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(melder="Jahresmelder") 
   station_sj <- semi_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(melder="Beides")
   Stationen <- bind_rows(station_s_only,station_sj,station_j_only) %>% 
-    arrange(stations_id) %>%  rename(lat=geograph.breite,lon=geograph.laenge) %>% 
-    mutate(datum_stationsaufloesung=ymd(dmy(datum_stationsaufloesung)))
+    arrange(stations_id) %>%  #rename(lat=geograph.breite,lon=geograph.laenge) %>% 
+    mutate(datum_stationsaufloesung=ymd(dmy(datum_stationsaufloesung))) %>%
+    rename(any_of(column_fix_names))
   
   copy_to(con, Stationen, "Stationen",
           temporary = FALSE,
@@ -226,7 +236,7 @@ if(downloaddata) download_files(filelist)
   
   ### Combine Phasendefinition Metadata into one df per reporter and both into Phasendefinition
   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
-  indexes <- list("objekt_id","phasen_id")
+  indexes <- list("pflanze_id","phase_id")
   for ( reportertype in c("Jahresmelder","Sofortmelder","melder") ) {
     abfrage <- switch(reportertype,
                       "Jahresmelder" = "Phasendefinition_Jahresmelder",
@@ -246,7 +256,8 @@ if(downloaddata) download_files(filelist)
       #fix type of dbl column to int column 
       mutate(across(where(is.double), as.integer))  %>%  
       #remove dulicates
-      distinct()
+      distinct() %>%  
+      rename(any_of(column_fix_names))
     
     copy_to(con, data, abfrage,
             temporary = FALSE,
@@ -265,13 +276,14 @@ if(downloaddata) download_files(filelist)
     transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
                                col_select=-contains(c("...","eor")),show_col_types = FALSE,
-                               col_names=c("stations_id","referenzjahr", "qualitaetsniveau", "objekt_id", 
+                               col_names=c("stations_id","refjahr", "qualitaetsniveau", "objekt_id", 
                                            "objekt", "phasen_id", "phase", "notizen","eor","...1"),
                                n_max = 99000000)}) %>% 
     
     reduce(rbind) %>% 
     #fix type of dbl column to int column 
-    mutate(across(where(is.double), as.integer)) 
+    mutate(across(where(is.double), as.integer)) %>% 
+    rename(any_of(column_fix_names))
   
   copy_to(con, notizendb, "Notizen",
           temporary = FALSE,
@@ -290,19 +302,20 @@ if(downloaddata) download_files(filelist)
     transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
                                col_select=-contains(c("...","eor")),show_col_types = FALSE,
-                               col_names=c("stations_id","referenzjahr", "objekt_id", 
+                               col_names=c("stations_id","refjahr", "objekt_id", 
                                            "objekt", "sorte_id","sorte", "notizen","eor","...1"),
                                n_max = 99000000)}) %>% 
     
     reduce(rbind) %>% 
     #fix type of dbl column to int column 
-    mutate(across(where(is.double), as.integer))
+    mutate(across(where(is.double), as.integer)) %>% 
+    rename(any_of(column_fix_names))
   
   
   copy_to(con, spezi_notiz, "Spezifizierung_Notizen",
           temporary = FALSE,
           overwrite=TRUE,
-          indexes = c("stations_id","objekt_id","sorte_id")
+          indexes = c("stations_id","pflanze_id","sorte_id")
   )
   DBI::dbDisconnect(con) 
   
@@ -342,13 +355,14 @@ if(downloaddata) download_files(filelist)
       ) %>%
       mutate(across(where(is.double), as.integer)) %>%
       #remove whitespaces in columnnames
-      rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+      rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>% 
+      rename(any_of(column_fix_names))
     
     con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
     copy_to(con, lala, df$tabname,
             temporary = FALSE,
             overwrite=TRUE,
-            indexes = c("stations_id","objekt_id","sorte_id")
+            indexes = c("stations_id","pflanze_id","sorte_id")
     )
     DBI::dbDisconnect(con) 
   }
@@ -364,7 +378,7 @@ if(downloaddata) download_files(filelist)
   data <- filelistdaten %>% mutate(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     select(filepath) %>%  
     map(function(x) read_csv2(file=x,skip=1,locale = locale(encoding = "ISO-8859-1"),
-                              col_names= c("stations_id","referenzjahr","qualitaetsniveau","objekt_id","Phasen_id",
+                              col_names= c("stations_id","refjahr","qualitaetsniveau","objekt_id","phasen_id",
                                            "eintrittsdatum","eintrittsdatum_qb","jultag","eor","...1"),
                               col_select=-contains(c("...","eor")),show_col_types = FALSE,
                               n_max = 99000000)) %>% 
@@ -373,8 +387,8 @@ if(downloaddata) download_files(filelist)
     #remove whitespaces in columnnames 
     rename_with(~tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%  
     #fix type of dbl column to int column 
-    mutate(across(where(is.double), as.integer),
-           eintrittsdatum = ymd(eintrittsdatum)) 
+    mutate(across(where(is.double), as.integer)) %>% 
+    rename(any_of(column_fix_names))
   #%>%  
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
   copy_to(con, data, "Daten",
@@ -395,9 +409,9 @@ invisible(gc())
   
 }#create_database 
 
-create_database(downloaddata = FALSE)
-
-create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
+#create_database(downloaddata = FALSE)
+#create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
+create_database(dbname="temp/test4.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
 
 
 
