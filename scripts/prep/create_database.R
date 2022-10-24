@@ -220,7 +220,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   station_sj <- semi_join(Jahresmelder,Sofortmelder,by="stations_id") %>% mutate(melder="Beides")
   Stationen <- bind_rows(station_s_only,station_sj,station_j_only) %>% 
     arrange(stations_id) %>%  #rename(lat=geograph.breite,lon=geograph.laenge) %>% 
-    mutate(datum_stationsaufloesung=ymd(dmy(datum_stationsaufloesung))) %>%
+    #mutate(datum_stationsaufloesung=ymd(dmy(datum_stationsaufloesung))) %>%
     rename(any_of(column_fix_names))
   
   copy_to(con, Stationen, "Stationen",
@@ -397,9 +397,12 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
           overwrite=TRUE,
           indexes = indexes
   )
+  
+#### Create megaframe View in database 
+  
+  create_megaframe(con) %>% create_view_in_db("Megaframe",con)
+  
   DBI::dbDisconnect(con)
-  
-  
   
 #### Deleting Temp Data #### 
 if(!keepdldata) {
@@ -412,7 +415,7 @@ invisible(gc())
 
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
-create_database(dbname="temp/test4.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
+create_database(dbname="temp/test5.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
 
 
 
