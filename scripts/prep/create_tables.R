@@ -1,20 +1,21 @@
 ## Joining Datatables
+source("scripts/prep/functions_db.R")
 library(RSQLite)
 library(DBI)
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/dbtest.sqlite3" )
 
 dbListTables(con)
 
-con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/temp.sqlite3")
+con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test5.sqlite3")
 
 dbListTables(con2)
-
+con <- con2
 
 Stationen <- tbl(con2, "Stationen") 
 Pflanze <- tbl(con2, "Pflanze") 
 Daten <- tbl(con2,"Daten")
 Phasendefinition <- tbl(con2,"Phasendefinition")
-Phasen <- Phasendefinition %>%  select(phasen_id,phase) %>% arrange(phasen_id) %>% distinct() %>%  collect() 
+Phase <- Phasendefinition %>%  select(phase_id,phase) %>% arrange(phase_id) %>% distinct() %>%  collect() 
 
 station_s <- tbl(con2,"Phaenologie_Stationen_Sofortmelder")
 station_j <- tbl(con2,"Phaenologie_Stationen_Jahresmelder")
@@ -23,8 +24,10 @@ station_j_only <-anti_join(station_j,station_s,by="stations_id") %>% mutate(Meld
 station_sj <- semi_join(station_j,station_s,by="stations_id") %>% mutate(Melder="Beides") %>% collect()
 lala <- bind_rows(station_s_only,station_sj,station_j_only)
 
-create_megaframe <- function () {
+create_megaframe <- function (con=con) {
+  
   #con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <- con
   Stationen <- tbl(con, "Stationen") 
   Pflanze <- tbl(con, "Pflanze") 
   Daten <- tbl(con,"Daten")
@@ -33,199 +36,44 @@ create_megaframe <- function () {
   Obst_spezi <- tbl(con, "Obst_Spezifizierung")
   Mais_spezi <- tbl(con, "Mais_Spezifizierung")
   megaframe <- left_join(Daten,Stationen,by="stations_id") %>%
-  left_join(Phasendefinition,by=c("objekt_id","phasen_id")) %>%
-  left_join(Phase,by=c("phase","phasen_id")) %>%
-  left_join(Pflanze,by=c("objekt_id","objekt")) 
+  left_join(Phasendefinition,by=c("pflanze_id","phase_id")) %>%
+  left_join(Phase,by=c("phase","phase_id")) %>%
+  left_join(Pflanze,by=c("pflanze_id","pflanze")) 
+  
+  #DBI::dbDisconnect(con)
   
   return(megaframe)
 }
-megaframe <- create_megaframe()
+
+create_view_in_db <- function(df,viewname,con=con) {
+  #con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <- con 
+  require(dbplyr)
+  #df <- tibble(...)
+  df %>% 
+    show_query() %>%  
+    capture.output() %>% 
+    #erste Zeile vom SQL befehl austauschen gegen create view dbplyr kann keine views erstellen
+    `[<-`(1, paste0("CREATE VIEW ",viewname," AS")) %>%
+    paste(collapse = " \n ") -> viewquery
+  DBI::dbExecute(con, viewquery)
+  #DBI::dbDisconnect(con)
+}
+
+megaframe <- create_megaframe(con2) %>% create_view_in_db("megatest",con2)
+
+
 
 megaframe %>% show_query() %>%  
 capture.output() %>% 
+  #erste Zeile vom SQL befehl austauschen gegen create view dbplyr kann keine views erstellen
   `[<-`(1, "CREATE VIEW megaframe AS") %>%
   paste(collapse = " \n ") -> viewquery
 
 
 DBI::dbExecute(con, viewquery)
 
-#View erstellen 
-#nrow <- dbExecute(con, paste0("CREATE VIEW test AS",
-#                              "Random statements"))
-
-dbExecute(con, paste0("CREATE VIEW test AS SELECT
-`stations_id`,
-`referenzjahr`,
-`qualitaetsniveau`,
-`LHS`.`objekt_id` AS `objekt_id`,
-`phasen_id`,
-`eintrittsdatum`,
-`eintrittsdatum_qb`,
-`jultag`,
-`stationsname`,
-`geograph.breite`,
-`geograph.laenge`,
-`stationshoehe`,
-`naturraumgruppe_code`,
-`naturraumgruppe`,
-`naturraum_code`,
-`naturraum`,
-`datum_stationsaufloesung`,
-`bundesland`,
-`LHS`.`objekt` AS `objekt`,
-`phase`,
-`phasendefinition`,
-`bbch_code`,
-`hinweis_bbch`,
-`objekt_englisch`,
-`objekt_latein`
-FROM (
-  SELECT
-  `stations_id`,
-  `referenzjahr`,
-  `qualitaetsniveau`,
-  `LHS`.`objekt_id` AS `objekt_id`,
-  `LHS`.`phasen_id` AS `phasen_id`,
-  `eintrittsdatum`,
-  `eintrittsdatum_qb`,
-  `jultag`,
-  `stationsname`,
-  `geograph.breite`,
-  `geograph.laenge`,
-  `stationshoehe`,
-  `naturraumgruppe_code`,
-  `naturraumgruppe`,
-  `naturraum_code`,
-  `naturraum`,
-  `datum_stationsaufloesung`,
-  `bundesland`,
-  `objekt`,
-  `phase`,
-  `phasendefinition`,
-  `bbch_code`,
-  `hinweis_bbch`
-  FROM (
-    SELECT
-    `LHS`.`stations_id` AS `stations_id`,
-    `referenzjahr`,
-    `qualitaetsniveau`,
-    `objekt_id`,
-    `phasen_id`,
-    `eintrittsdatum`,
-    `eintrittsdatum_qb`,
-    `jultag`,
-    `stationsname`,
-    `geograph.breite`,
-    `geograph.laenge`,
-    `stationshoehe`,
-    `naturraumgruppe_code`,
-    `naturraumgruppe`,
-    `naturraum_code`,
-    `naturraum`,
-    `datum_stationsaufloesung`,
-    `bundesland`
-    FROM `Daten` AS `LHS`
-    LEFT JOIN `Stationen` AS `RHS`
-    ON (`LHS`.`stations_id` = `RHS`.`stations_id`)
-  ) AS `LHS`
-  LEFT JOIN `Phasendefinition` AS `RHS`
-  ON (
-    `LHS`.`objekt_id` = `RHS`.`objekt_id` AND
-    `LHS`.`phasen_id` = `RHS`.`phasen_id`
-  )
-) AS `LHS`
-LEFT JOIN `Pflanze` AS `RHS`
-ON (`LHS`.`objekt_id` = `RHS`.`objekt_id` AND `LHS`.`objekt` = `RHS`.`objekt`)" )) 
-
-
-
-
-
-
-dbExecute(con, paste0("CREATE VIEW test AS SELECT
-`stations_id`,
-`referenzjahr`,
-`qualitaetsniveau`,
-`LHS`.`objekt_id` AS `objekt_id`,
-`phasen_id`,
-`eintrittsdatum`,
-`eintrittsdatum_qb`,
-`jultag`,
-`stationsname`,
-`geograph.breite`,
-`geograph.laenge`,
-`stationshoehe`,
-`naturraumgruppe_code`,
-`naturraumgruppe`,
-`naturraum_code`,
-`naturraum`,
-`datum_stationsaufloesung`,
-`bundesland`,
-`LHS`.`objekt` AS `objekt`,
-`phase`,
-`phasendefinition`,
-`bbch_code`,
-`hinweis_bbch`,
-`objekt_englisch`,
-`objekt_latein`
-FROM (
-  SELECT
-  `stations_id`,
-  `referenzjahr`,
-  `qualitaetsniveau`,
-  `LHS`.`objekt_id` AS `objekt_id`,
-  `LHS`.`phasen_id` AS `phasen_id`,
-  `eintrittsdatum`,
-  `eintrittsdatum_qb`,
-  `jultag`,
-  `stationsname`,
-  `geograph.breite`,
-  `geograph.laenge`,
-  `stationshoehe`,
-  `naturraumgruppe_code`,
-  `naturraumgruppe`,
-  `naturraum_code`,
-  `naturraum`,
-  `datum_stationsaufloesung`,
-  `bundesland`,
-  `objekt`,
-  `phase`,
-  `phasendefinition`,
-  `bbch_code`,
-  `hinweis_bbch`
-  FROM (
-    SELECT
-    `LHS`.`stations_id` AS `stations_id`,
-    `referenzjahr`,
-    `qualitaetsniveau`,
-    `objekt_id`,
-    `phasen_id`,
-    `eintrittsdatum`,
-    `eintrittsdatum_qb`,
-    `jultag`,
-    `stationsname`,
-    `geograph.breite`,
-    `geograph.laenge`,
-    `stationshoehe`,
-    `naturraumgruppe_code`,
-    `naturraumgruppe`,
-    `naturraum_code`,
-    `naturraum`,
-    `datum_stationsaufloesung`,
-    `bundesland`
-    FROM `Daten` AS `LHS`
-    LEFT JOIN `Stationen` AS `RHS`
-    ON (`LHS`.`stations_id` = `RHS`.`stations_id`)
-  ) AS `LHS`
-  LEFT JOIN `Phasendefinition` AS `RHS`
-  ON (
-    `LHS`.`objekt_id` = `RHS`.`objekt_id` AND
-    `LHS`.`phasen_id` = `RHS`.`phasen_id`
-  )
-) AS `LHS`
-LEFT JOIN `Pflanze` AS `RHS`
-ON (`LHS`.`objekt_id` = `RHS`.`objekt_id` AND `LHS`.`objekt` = `RHS`.`objekt`)" )) 
-
+megaframe <- tbl(con2,"Megaframe")
 
 
 Daten_rlp <- megaframe %>% filter(bundesland %in% c("Rheinland-Pfalz")) %>% collect()
