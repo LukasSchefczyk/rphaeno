@@ -16,6 +16,7 @@ create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",
   if( !dbname %>% str_detect("sqlite") ) stop("dbname should be sqlite3 database and end with .sqlite3")
   if( !dir.exists(temp_dir) ) dir.create(temp_dir,recursive = TRUE)
   
+  source("scripts/prep/functions_db.R")
   
 #### get filelist ####
   
