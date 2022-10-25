@@ -44,8 +44,8 @@ remove_view_from_db <- function(viewname,con=con) {
 
 station_df_to_sf <- function (...,src_crs,tar_crs) {
   df <- tibble(...)
-  tar_crs <- "EPSG:4326"
-  src_crs <- "EPSG:25832"
+  src_crs <- "EPSG:4326"
+  tar_crs <- "EPSG:25832"
   df2 <- st_as_sf(df,coords = c("lon","lat")) %>% 
     st_set_crs(.,st_crs(src_crs)) %>% 
     st_transform(.,st_crs(tar_crs))
