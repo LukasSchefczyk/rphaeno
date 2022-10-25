@@ -437,7 +437,7 @@ invisible(gc())
 
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
-create_database(dbname="temp/test6.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
-
+create_database(dbname="temp/test7.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
+•
 
 

@@ -6,7 +6,7 @@ con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/dbtest.sqlite3" )
 
 dbListTables(con)
 
-con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test5.sqlite3")
+con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test7.sqlite3")
 
 dbListTables(con2)
 con <- con2
@@ -46,4 +46,5 @@ Daten_rlp <- megaframe %>%
 
 Kettenheim <- megaframe %>% filter(stationsname=="Kettenheim") %>% collect()
 Kettenheim %>% filter(phase_id==5,pflanze_id==210) %>%  ggplot() + aes(x=refjahr,y=jultag) + geom_line()
+
 
