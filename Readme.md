@@ -73,6 +73,23 @@ create_database(dbname="temp/temp.sqlite3",temp_dir="temp/",
 **plant**: Hier kann ein vektor angegeben werden mit Pflanzen die heruntergeladen werden soll. Bspw. c("Birne","Hasel"). Die Abfrage läuft über str_detect und daher werden bspw. alle Birnen Daten genommen (Birne,Birne_fruehe_Reife,Birne_spaete_Reife).
 c("beere") würde bspw. Brombeere Himbeere Erdbeere Johannisbeere Rote Johannisbeere Stachelbeere Schneebeere herunterladen.
 
+
+#### *(internal)* create_megaframe()
+
+
+#### create_view_in_db()
+
+#### remove_view_from_db()
+
+#### print_all()
+
+#### station_df_to_sf()
+
+#### nr_df_to_sf()
+
+
+
+
 ### **Datenbank**
 
 ##### **Haupttabellen**
@@ -102,3 +119,6 @@ c("beere") würde bspw. Brombeere Himbeere Erdbeere Johannisbeere Rote Johannisb
 
 #### Anmerkungen zu Tabellen/Spalten
 objekt_latein/pflanze_latein  manche "Pflanzen" wie Dauergrünland haben keinen Lateinischen Namen und werden mit ------- eingetragen  (eventuell fixen auf NA ?!?)
+
+Naturraum_code(s) 1382/1551 zu 1380/1550 geändert
+Naturraum Namen anhand des Naturraum_codes mit den Namen aus vg2500 Layer ersetzt. Damit die Namen einheitlich sind.
