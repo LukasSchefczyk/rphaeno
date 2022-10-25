@@ -35,3 +35,8 @@ create_view_in_db <- function(df_query,viewname,con=con) {
   DBI::dbExecute(con, viewquery)
   #DBI::dbDisconnect(con)
 }
+
+remove_view_from_db <- function(viewname,con=con) {
+  delquery <- paste0("DROP VIEW ",viewname)
+  DBI::dbExecute(con, delquery)
+}
