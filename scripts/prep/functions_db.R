@@ -55,3 +55,24 @@ station_df_to_sf <- function (...,src_crs,tar_crs) {
 print_all <- function (...) {
   print(...,n=Inf,width=Inf)
 }
+
+
+nr_df_to_sf <- function(...,col2geom=NULL,geomcol=NULL) {
+  geomcol <- geomcol
+  col2geom <- col2geom
+  checknr <- c("naturraum","naturraum_code","naturraumgruppe","naturraumgruppe_code")
+  if(is.null(geomcol) || !(geomcol %in% checknr)) stop(paste("geomcol needs to be one of",paste(checknr,collapse = ","))) 
+  if(is.null(col2geom)) stop("col2geom needs to be defined")                  
+  df <- tibble(...)
+  #check for nr column in df
+  if (geomcol %in% c("naturraum","naturraum_code") ) {
+  sf <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraum")
+  }
+  if (geomcol %in% c("naturraumgruppe_code","naturraumgruppe_code") ) {
+  sf <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe")
+  }
+  df %>% left_join(sf %>% select({{geomcol}},geom),by=setNames(col2geom,geomcol)) %>% st_sf %>% st_set_crs("EPSG:25832")
+
+}
+
+
