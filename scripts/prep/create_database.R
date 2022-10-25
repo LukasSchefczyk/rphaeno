@@ -11,6 +11,7 @@ create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",
   require(RSQLite)
   require(DBI)
   require(dbplyr)
+  require(sf)
   
   if(!is.atomic(plant)) stop("plant should be simple character vector like c(\"Apfel\",\"Eiche\"")
   if( !dbname %>% str_detect("sqlite") ) stop("dbname should be sqlite3 database and end with .sqlite3")
@@ -198,6 +199,27 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
         lala <- lala %>%  
         mutate(across(ends_with(c("_id","_code")),as.integer)) %>% 
         rename(any_of(column_fix_names))
+      
+      ##fix naturraum und naturraumgruppen namen zu vg2500 namen 
+        if(df$tablename =="Phaenologie_Stationen_Jahresmelder" || df$tablename =="Phaenologie_Stationen_Sofortmelder") {
+          nrg_sf2 <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe") %>% 
+            select(naturraumgruppe,naturraumgruppe_code) %>% 
+            st_drop_geometry() %>% distinct()
+          nr_sf2 <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraum") %>% 
+            select(naturraum,naturraum_code) %>%
+            st_drop_geometry() %>%   distinct()
+          
+          lala <- lala %>% select(-naturraum,-naturraumgruppe) %>%  collect() %>% 
+            #fix naturraum fuer 2 Stationen weil 4digit statt 3 
+            mutate(naturraum_code=case_when(naturraum_code == as.integer(1382) ~ as.integer(1380),
+                                          naturraum_code == as.integer(1551) ~ as.integer(1550),
+                                            TRUE ~ naturraum_code ) ) %>% 
+            full_join(nrg_sf2,by="naturraumgruppe_code") %>% 
+            full_join(nr_sf2,by="naturraum_code") %>%
+            #durch join enstehen NAs weil einige Naturraeume keine Station hat
+            drop_na(stations_id)
+ 
+        }
       
       copy_to(con, lala, df$tablename,
               temporary = FALSE,
@@ -415,7 +437,7 @@ invisible(gc())
 
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
-create_database(dbname="temp/test5.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
+create_database(dbname="temp/test6.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
 
 
 
