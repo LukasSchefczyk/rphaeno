@@ -40,3 +40,18 @@ remove_view_from_db <- function(viewname,con=con) {
   delquery <- paste0("DROP VIEW ",viewname)
   DBI::dbExecute(con, delquery)
 }
+
+
+station_df_to_sf <- function (...,src_crs,tar_crs) {
+  df <- tibble(...)
+  tar_crs <- "EPSG:4326"
+  src_crs <- "EPSG:25832"
+  df2 <- st_as_sf(df,coords = c("lon","lat")) %>% 
+    st_set_crs(.,st_crs(src_crs)) %>% 
+    st_transform(.,st_crs(tar_crs))
+  return(df2)
+}
+
+print_all <- function (...) {
+  print(...,n=Inf,width=Inf)
+}
