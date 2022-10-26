@@ -46,6 +46,7 @@ staatsgrenze -> vg_land dissolved -> Deutschland Grenze ohne Küstenpolygone
   require(RSQLite)
   require(DBI)
   require(dbplyr)
+  require(sf)
   ```
 
 ## **Functions**
@@ -54,6 +55,7 @@ staatsgrenze -> vg_land dissolved -> Deutschland Grenze ohne Küstenpolygone
 create_database(dbname="temp/temp.sqlite3",temp_dir="temp/",
                              plant=NULL,
                              downloaddata=TRUE,
+                             change_nr_names=FALSE,
                              meta_spezifizierung=TRUE,
                              meta_beschreibung=TRUE,
                              keepdldata=TRUE)
@@ -64,8 +66,9 @@ create_database(dbname="temp/temp.sqlite3",temp_dir="temp/",
 
 **downloaddata**: logical default TRUE, sollen die Daten heruntergeladen werden oder nicht. Sind die Daten beispielsweise alle heruntergeladen worden um eine DB zu erstellen die alle Daten beinhaltet, man aber nun eine erstellen will die nur bestimmte Pflanzen hat oder man möchte was testen.
 
-**keepdldata**: logical default TRUE. Soll am Ende der temp_dir gelöscht werden?
+**change_nr_names** logical default FALSE. Wenn TRUE werden die Naturraum Namen in der Stationstabelle anhand der Naturraum_codes zu den Namen der Naturräume im vg_2500 Layer geändert. 887 Stationen werden dadurch anderen Naturräumen zugeordnet! Vermutlich ist die vg_2500 grober aufgelöst (weil kostenlos) als der Layer den der DWD zur Zuordnung verwendet.
 
+**keepdldata**: logical default TRUE. Soll am Ende der temp_dir gelöscht werden?
 **meta_spezifizierung**: Sollen die Spezifizierungen von Obst, Mais, Rueben und Weinrebe heruntergeladen werden ? Die Dateien sind unnötig groß beim Download, Obst bspw. ist 1.28 GIGABYTE groß.. da sind dutzende Leerzeichen pro Feld mit drin und Leerzeilen etc. Vernünftig als csv abgespeichert wären es 10mb...
 
 **meta_beschreibung**: logical default TRUE. Sollen die Beschreibungs PDFs mit runtergeladen werden. Ist plant gesetzt werden nur die ausgewählten Pflanzen pdfs geladen.
@@ -92,16 +95,19 @@ c("beere") würde bspw. Brombeere Himbeere Erdbeere Johannisbeere Rote Johannisb
 
 ### **Datenbank**
 
-##### **Haupttabellen**
-- **megaframe** (View/Virtuelle Tabelle)
-  Join der Tabellen Daten Stationen Pflanze Phasendefinition
+#### **Haupttabellen**
+- **megaframe** (View/Virtuelle Tabelle)  
+  Join der Tabellen
   - Daten
   - Stationen
   - Pflanze
   - Phase
-  - Phasendefinition : Join aus
+  - Phasendefinition :  
+    Join aus
     - Phasendefinition_Jahresmelder
-    - Phasendefinition_Sofortmelder  
+    - Phasendefinition_Sofortmelder   
+
+
 - Notizen
 - Spezifizierungen
   - Obst_Spezifizierung
