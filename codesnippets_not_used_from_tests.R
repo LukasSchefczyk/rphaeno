@@ -244,3 +244,9 @@ filelistmeta_distinct %>%
 Obst_spezi <- tbl(con, "Obst_Spezifizierung") %>%  collect()
 
 write_csv(Obst_spezi,"Obstspezi.txt.gz")
+
+#doesnt work 
+m <- dbDriver("SQLite")
+con <- dbConnect(m, dbname = "test.db",loadable.extensions = TRUE)
+sql <- "SELECT load_extension('libspatialite.so')"
+rs <- dbGetQuery(con, sql)
