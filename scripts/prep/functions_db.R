@@ -57,7 +57,7 @@ print_all <- function (...) {
 }
 
 
-nr_df_to_sf <- function(...,col2geom=NULL,geomcol=NULL) {
+nr_df_to_sf <- function(...,col2geom=NULL,geomcol=NULL,clip=NULL) {
   geomcol <- geomcol
   col2geom <- col2geom
   checknr <- c("naturraum","naturraum_code","naturraumgruppe","naturraumgruppe_code")
@@ -71,7 +71,22 @@ nr_df_to_sf <- function(...,col2geom=NULL,geomcol=NULL) {
   if (geomcol %in% c("naturraumgruppe_code","naturraumgruppe_code") ) {
   sf <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe")
   }
-  df %>% left_join(sf %>% select({{geomcol}},geom),by=setNames(col2geom,geomcol)) %>% st_sf %>% st_set_crs("EPSG:25832")
+  if (geomcol %in% c("bundesland")) {
+    sf <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","bundesland")  
+  }
+  if(!is.null(clip)) {
+    #st_union input to make one polygon if there are multipolygons then st_intersect to cut/clip polygon
+    if(!is.character(clip)) stop("clip should be a character vector like c(\"Rheinland-Pfalz\")")
+    bld <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","bundesland") %>% filter(name %in% clip) %>% st_union
+    sf <- suppressWarnings(st_intersection(sf,bld))
+  }
+  df %>% 
+    #setNames to emulate named vector e.g. c("naturraum"="naturraum")
+    {if(is.null(clip))
+          left_join(.,sf %>% select({{geomcol}},geom),by=setNames(col2geom,geomcol)) 
+      else 
+          full_join(.,sf %>% select({{geomcol}},geom),by=setNames(col2geom,geomcol))} %>% 
+    st_sf %>% st_set_crs("EPSG:25832")
 
 }
 

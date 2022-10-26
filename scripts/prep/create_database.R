@@ -1,7 +1,7 @@
 ## Create Phenodatabase from DWD function
 
 create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",
-                             plant=NULL,downloaddata=TRUE,meta_spezifizierung=TRUE,meta_beschreibung=TRUE,
+                             plant=NULL,downloaddata=TRUE,change_nr_names=FALSE,meta_spezifizierung=TRUE,meta_beschreibung=TRUE,
                              keepdldata=TRUE) {
 #### libraries ####   
   require(tidyverse)
@@ -157,7 +157,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
     pwalk(function(...) { 
       
       df <- tibble(...)
-      con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+      con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname ,loadable.extensions = TRUE)
       indexes <- switch(df$tablename,
                         "Phaenologie_Besonderheiten_Zeitreihen" = list("pflanze_id","phase_id"),
                         "Phaenologie_Qualitaetsbyte" = list("qualitaetsbyte"),
@@ -201,6 +201,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
         rename(any_of(column_fix_names))
       
       ##fix naturraum und naturraumgruppen namen zu vg2500 namen 
+        if(change_nr_names) {
         if(df$tablename =="Phaenologie_Stationen_Jahresmelder" || df$tablename =="Phaenologie_Stationen_Sofortmelder") {
           nrg_sf2 <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe") %>% 
             select(naturraumgruppe,naturraumgruppe_code) %>% 
@@ -218,7 +219,8 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
             full_join(nr_sf2,by="naturraum_code") %>%
             #durch join enstehen NAs weil einige Naturraeume keine Station hat
             drop_na(stations_id)
- 
+  
+        }
         }
       
       copy_to(con, lala, df$tablename,
@@ -232,7 +234,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   
   
   #### Combine Stationen into Stationen Table ####  
-  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
   Jahresmelder <- tbl(con, "Phaenologie_Stationen_Jahresmelder") %>%  collect()
   Sofortmelder <- tbl(con, "Phaenologie_Stationen_Sofortmelder") %>%  collect()
   #Stationen <- rbind(Jahresmelder,Sofortmelder)  %>%  distinct(stations_id,.keep_all = TRUE)
@@ -258,7 +260,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   
   
   ### Combine Phasendefinition Metadata into one df per reporter and both into Phasendefinition
-  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
   indexes <- list("pflanze_id","phase_id")
   for ( reportertype in c("Jahresmelder","Sofortmelder","melder") ) {
     abfrage <- switch(reportertype,
@@ -294,7 +296,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   
   
   ##Notizen in extra Tabelle laden 
-  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
   notizendb <- notizen %>% 
     transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
@@ -318,7 +320,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   
   if(meta_spezifizierung) {
   ### Spezifizierung notiz
-  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
   spezi_notiz <- filelistspezi %>%  
     filter(str_detect(file,"Notiz")) %>%  
     filter(str_detect(file,"Spezifizierung",negate = FALSE)) %>% 
@@ -381,7 +383,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
       rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>% 
       rename(any_of(column_fix_names))
     
-    con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname )
+    con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = df$dbname ,loadable.extensions = TRUE)
     copy_to(con, lala, df$tabname,
             temporary = FALSE,
             overwrite=TRUE,
@@ -413,7 +415,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
     mutate(across(where(is.double), as.integer)) %>% 
     rename(any_of(column_fix_names))
   #%>%  
-  con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+  con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
   copy_to(con, data, "Daten",
           temporary = FALSE,
           overwrite=TRUE,
@@ -438,6 +440,3 @@ invisible(gc())
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
 create_database(dbname="temp/test7.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
-•
-
-
