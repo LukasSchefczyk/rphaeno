@@ -37,3 +37,21 @@ lele <- db_nrg_chr %>% left_join(nrg_sf %>% select(naturraumgruppe_code,geom),by
 
 ggplot(lele) + 
   geom_sf(aes(fill=naturraumgruppe_code,geometry=geom),show.legend = FALSE)
+
+
+bld <- "Rheinland-Pfalz" ; bld <- c("Rheinland-Pfalz","Saarland")
+lala %>% filter(bundesland %in% bld) %>% collect() %>% 
+  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code",clip=bld) %>% 
+  ggplot() +
+  geom_sf(aes(fill=naturraum_code,geometry=geom),show.legend = FALSE) +
+  geom_sf(data=lala %>% filter(bundesland %in% bld) %>% collect() %>% station_df_to_sf() ) 
+
+bld <- c("Rheinland-Pfalz","Saarland")
+lala %>% filter(bundesland %in% bld) %>% collect() %>% 
+  filter(str_detect(naturraum,regex("saar",ignore_case = TRUE))) %>% 
+  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code",clip=NULL) %>% 
+  ggplot() +
+  geom_sf(aes(fill=naturraum_code,geometry=geom),show.legend = FALSE) +
+  geom_sf(data=lala %>% filter(bundesland %in% bld) %>% collect() %>%
+            filter(str_detect(naturraum,regex("saar",ignore_case = TRUE))) %>%  station_df_to_sf() ) #+ 
+ # geom_sf(data=sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","bundesland") %>%  filter(name %in% bld) , fill=NA, size=0.8)
