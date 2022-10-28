@@ -66,9 +66,10 @@ create_database(dbname="temp/temp.sqlite3",temp_dir="temp/",
 
 **downloaddata**: logical default TRUE, sollen die Daten heruntergeladen werden oder nicht. Sind die Daten beispielsweise alle heruntergeladen worden um eine DB zu erstellen die alle Daten beinhaltet, man aber nun eine erstellen will die nur bestimmte Pflanzen hat oder man möchte was testen.
 
-**change_nr_names** logical default FALSE. Wenn TRUE werden die Naturraum Namen in der Stationstabelle anhand der Naturraum_codes zu den Namen der Naturräume im vg_2500 Layer geändert. 887 Stationen werden dadurch anderen Naturräumen zugeordnet! Vermutlich ist die vg_2500 grober aufgelöst (weil kostenlos) als der Layer den der DWD zur Zuordnung verwendet.
+**change_nr_names** logical default FALSE. Wenn TRUE werden die Naturraum Namen in der Stationstabelle anhand der Naturraum_codes zu den Namen der Naturräume im WFS Layer des BfN geändert. 887 Stationen werden dadurch anderen Naturräumen zugeordnet! Vermutlich ist der WFS des BfN gröber aufgelöst (weil kostenlos) als der Layer den der DWD zur Zuordnung verwendet.
 
 **keepdldata**: logical default TRUE. Soll am Ende der temp_dir gelöscht werden?
+
 **meta_spezifizierung**: Sollen die Spezifizierungen von Obst, Mais, Rueben und Weinrebe heruntergeladen werden ? Die Dateien sind unnötig groß beim Download, Obst bspw. ist 1.28 GIGABYTE groß.. da sind dutzende Leerzeichen pro Feld mit drin und Leerzeilen etc. Vernünftig als csv abgespeichert wären es 10mb...
 
 **meta_beschreibung**: logical default TRUE. Sollen die Beschreibungs PDFs mit runtergeladen werden. Ist plant gesetzt werden nur die ausgewählten Pflanzen pdfs geladen.
@@ -78,18 +79,33 @@ c("beere") würde bspw. Brombeere Himbeere Erdbeere Johannisbeere Rote Johannisb
 
 
 #### *(internal)* create_megaframe()
-
+```R
+create_megaframe(con=con)
+```
+con von DBI package zur Datenbank
+Ein View aus den joins von allen "wichtigen" Tabellen wird gemacht.
+Daten,Stationen,Pflanze,Phase,Phasendefinition
 
 #### create_view_in_db()
-
+```R
+create_view_in_db(df_query,viewname,con=con)
+```
 #### remove_view_from_db()
-
+```R
+remove_view_from_db(viewname,con=con)
+```
 #### print_all()
-
+```R
+print_all(...)
+```
 #### station_df_to_sf()
-
+```R
+station_df_to_sf(...,src_crs,tar_crs)
+```
 #### nr_df_to_sf()
-
+```R
+nr_df_to_sf(...,col2geom=NULL,geomcol=NULL,clip=NULL)
+```
 
 
 
@@ -128,3 +144,20 @@ objekt_latein/pflanze_latein  manche "Pflanzen" wie Dauergrünland haben keinen 
 
 Naturraum_code(s) 1382/1551 zu 1380/1550 geändert
 Naturraum Namen anhand des Naturraum_codes mit den Namen aus vg2500 Layer ersetzt. Damit die Namen einheitlich sind.
+
+
+#### Andere wichtige Funkionen/Befehle aus anderen Paketen
+##### Datenbank verbindung
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+#####  Tabellenliste aus Datenbank
+dbListTables(con)
+##### Tabelle aus Datenbank lesen
+```R
+Table <- tbl(con,tablename)
+
+megaframe <- tbl(con, "Megaframe")
+Daten_rlp <- megaframe %>%
+  filter(bundesland %in% c("Rheinland-Pfalz")) %>%
+  collect()
+```
+Hinweis: Tabelle ist lazy loaded, d.h. dbplyr frägt nur 10 Einträge ab und zeigt diese und erst wenn collect() benutzt werden die Daten abgefragt und in die Variabel geschrieben. Dies hat den Vorteil das es sehr RAM schonend ist. Der Megaframe braucht mehr als 4 GB RAM als Variabel
