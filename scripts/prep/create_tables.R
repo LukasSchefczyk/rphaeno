@@ -6,7 +6,7 @@ con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/dbtest.sqlite3" )
 
 dbListTables(con)
 
-con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test7.sqlite3")
+con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test8.sqlite3")
 
 dbListTables(con2)
 con <- con2

@@ -55,3 +55,6 @@ lala %>% filter(bundesland %in% bld) %>% collect() %>%
   geom_sf(data=lala %>% filter(bundesland %in% bld) %>% collect() %>%
             filter(str_detect(naturraum,regex("saar",ignore_case = TRUE))) %>%  station_df_to_sf() ) #+ 
  # geom_sf(data=sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","bundesland") %>%  filter(name %in% bld) , fill=NA, size=0.8)
+
+#write table to gpkg 
+#st_write(station_df_to_sf(lulu),"rlpstations.gpkg")
