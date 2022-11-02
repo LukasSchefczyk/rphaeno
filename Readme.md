@@ -82,30 +82,51 @@ c("beere") würde bspw. Brombeere Himbeere Erdbeere Johannisbeere Rote Johannisb
 ```R
 create_megaframe(con=con)
 ```
-con von DBI package zur Datenbank
+con connection Objekt zur Datenbank über DBI
 Ein View aus den joins von allen "wichtigen" Tabellen wird gemacht.
-Daten,Stationen,Pflanze,Phase,Phasendefinition
+Daten, Stationen, Pflanze, Phase, Phasendefinition
 
 #### create_view_in_db()
 ```R
 create_view_in_db(df_query,viewname,con=con)
 ```
+*con* connection Objekt zur Datenbank über DBI  
+*viewname* Name des zu erstellenden Views  
+*df_query* Ein Query Objekt aus dem dbplyr package
+Die Query die zur Datenbank gesendet wird modifziert, dabei wird erste Zeile ersetzt durch "CREATE VIEW 'viewname' AS"
 #### remove_view_from_db()
 ```R
 remove_view_from_db(viewname,con=con)
 ```
+*con* connection Objekt zur Datenbank über DBI  
+*viewname* Name des zu loeschenden Views
+
 #### print_all()
 ```R
 print_all(...)
 ```
+Wrapper für tidyverse tibble print()  
+print(...,n=Inf,width=Inf)
+
 #### station_df_to_sf()
 ```R
-station_df_to_sf(...,src_crs,tar_crs)
+station_df_to_sf(...,src_crs=NULL ,tar_crs=NULL,coords_col=NULL,remove=TRUE)
 ```
+1. Argument Tibble mit lon und lat als Spalten  
+*src_crs* Default "EPSG:4326" . CRS der Eingangsdaten  
+*tar_crs* Default "EPSG:25832" . CRS der Targetgeometry  
+*coords_col* Default c("lon","lat") . Spaltennamen der Punktkoordinaten.  
+*remove* Default TRUE. Löscht die beiden Spalten der Punktkoordinaten nach der Geometryerstellung  
+
 #### nr_df_to_sf()
 ```R
 nr_df_to_sf(...,col2geom=NULL,geomcol=NULL,clip=NULL)
 ```
+1. Argument Tibble mit mindestens einer von vier Naturraum Spalte
+naturraum, naturraum_code, naturraumgruppe, naturraumgruppe_code.
+*col2geom* Spaltenname der Naturraumspalte im input df
+*geomcol* Spaltenname von zu verbindenen Naturraumspalte c("naturraum","naturraum_code","naturraumgruppe","naturraumgruppe_code").
+Aufgrund von Abweichungen der Namen und Ausdehnnugen zwischen DWD und BfN Naturräumen sollten die *_code Spalten zum verknüpfen verwendet werden.
 
 
 
