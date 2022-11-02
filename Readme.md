@@ -86,6 +86,16 @@ con connection Objekt zur Datenbank über DBI
 Ein View aus den joins von allen "wichtigen" Tabellen wird gemacht.
 Daten, Stationen, Pflanze, Phase, Phasendefinition
 
+#### *(internal)* create_megaframe_melder()
+```R
+create_megaframe(melder,con=con)
+```
+con connection Objekt zur Datenbank über DBI
+Ein View aus den joins von allen "wichtigen" Tabellen wird gemacht.
+Daten_*melder*, Stationen_*melder*, Pflanze, Phase, Phasendefinition
+
+
+
 #### create_view_in_db()
 ```R
 create_view_in_db(df_query,viewname,con=con)
@@ -137,6 +147,9 @@ Aufgrund von Abweichungen der Namen und Ausdehnnugen zwischen DWD und BfN Naturr
   Join der Tabellen
   - Daten
   - Stationen
+    Join aus
+    - Stationen_Jahresmelder
+    - Stationen_Sofortmelder
   - Pflanze
   - Phase
   - Phasendefinition :  
