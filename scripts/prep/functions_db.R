@@ -42,11 +42,12 @@ remove_view_from_db <- function(viewname,con=con) {
 }
 
 
-station_df_to_sf <- function (...,src_crs,tar_crs) {
+station_df_to_sf <- function (...,src_crs=NULL,tar_crs=NULL,coords_col=NULL,remove=TRUE) {
   df <- tibble(...)
-  src_crs <- "EPSG:4326"
-  tar_crs <- "EPSG:25832"
-  df2 <- st_as_sf(df,coords = c("lon","lat")) %>% 
+  if(is.null(src_crs)) src_crs <- "EPSG:4326"
+  if(is.null(tar_crs)) tar_crs <- "EPSG:25832"
+  if(is.null(coords_col)) coords_col <- c("lon","lat") 
+  df2 <- st_as_sf(df,coords = coords_col,remove=remove) %>% 
     st_set_crs(.,st_crs(src_crs)) %>% 
     st_transform(.,st_crs(tar_crs))
   return(df2)
