@@ -1,12 +1,36 @@
 ### Functions for Phenodatabase 
 
+#Daten gibts nicht mehr muss erstellt werden aus jahresmelder und sofortmelder daten tabellen
+
+
+create_megaframe_melder <- function (melder,con=con) {
+    #melder = Jahresmelder oder Sofortmelder
+    #con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+    con <- con
+    Stationen <- tbl(con, paste0("Stationen_",melder) )
+    Pflanze <- tbl(con, "Pflanze") 
+    Daten <- tbl(con,paste0("Daten_",melder))
+    Phasendefinition <- tbl(con,"Phasendefinition")
+    Phase <- tbl(con,"Phase")
+    megaframe <- left_join(Daten,Stationen,by="stations_id") %>%
+      left_join(Phasendefinition,by=c("pflanze_id","phase_id")) %>%
+      left_join(Phase,by=c("phase","phase_id")) %>%
+      left_join(Pflanze,by=c("pflanze_id","pflanze")) 
+    
+    #DBI::dbDisconnect(con)
+    
+    return(megaframe)
+  }
+
 create_megaframe <- function (con=con) {
   
   #con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
   con <- con
   Stationen <- tbl(con, "Stationen") 
   Pflanze <- tbl(con, "Pflanze") 
-  Daten <- tbl(con,"Daten")
+  Daten_Jahresmelder <- tbl(con,"Daten_Jahresmelder")
+  Daten_Sofortmelder <- tbl(con,"Daten_Sofortmelder")
+  Daten <- union_all(Daten_Sofortmelder,Daten_Jahresmelder)
   Phasendefinition <- tbl(con,"Phasendefinition")
   Phase <- tbl(con,"Phase")
   Obst_spezi <- tbl(con, "Obst_Spezifizierung")

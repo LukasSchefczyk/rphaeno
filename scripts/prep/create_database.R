@@ -200,10 +200,13 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
         mutate(across(ends_with(c("_id","_code")),as.integer)) %>% 
         rename(any_of(column_fix_names))
       
-      ##fix naturraum und naturraumgruppen namen zu vg2500 namen 
-        if(change_nr_names) {
+        
+      
+      ##fix naturraum und naturraumgruppen namen zu BfN Naturraumnamen 
+        
         if(df$tablename =="Phaenologie_Stationen_Jahresmelder" || df$tablename =="Phaenologie_Stationen_Sofortmelder") {
-          nrg_sf2 <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe") %>% 
+          if(change_nr_names) {
+            nrg_sf2 <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe") %>% 
             select(naturraumgruppe,naturraumgruppe_code) %>% 
             st_drop_geometry() %>% distinct()
           nr_sf2 <- sf::read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraum") %>% 
@@ -220,23 +223,26 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
             #durch join enstehen NAs weil einige Naturraeume keine Station hat
             drop_na(stations_id)
   
+          }
+        # Rename Phaenologie_Stationen_X zu Stationen_X  
+        df <- df %>% mutate(tablename=str_replace(tablename,"Phaenologie_",""))
         }
-        }
-      
+        
+
       copy_to(con, lala, df$tablename,
               temporary = FALSE,
               overwrite=TRUE,
               indexes = indexes
       )
       DBI::dbDisconnect(con)
-    }
-    )
+    }#pwalk function 
+    )#pwalk
   
   
   #### Combine Stationen into Stationen Table ####  
   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
-  Jahresmelder <- tbl(con, "Phaenologie_Stationen_Jahresmelder") %>%  collect()
-  Sofortmelder <- tbl(con, "Phaenologie_Stationen_Sofortmelder") %>%  collect()
+  Jahresmelder <- tbl(con, "Stationen_Jahresmelder") %>%  collect()
+  Sofortmelder <- tbl(con, "Stationen_Sofortmelder") %>%  collect()
   #Stationen <- rbind(Jahresmelder,Sofortmelder)  %>%  distinct(stations_id,.keep_all = TRUE)
   #adding Meldertyp to Stationen table
   station_s_only <-anti_join(Sofortmelder,Jahresmelder,by="stations_id") %>% mutate(melder="Sofortmelder")
@@ -399,8 +405,10 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   }#if(meta_spezifizierung)
 
 #### Load in Data ####   
-  
-  data <- filelistdaten %>% mutate(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
+  for ( melder in c("annual_reporters","immediate_reporters") ) {
+    if(melder=="annual_reporters") tabname="Daten_Jahresmelder"
+    if(melder=="immediate_reporters") tabname="Daten_Sofortmelder"
+  data <- filelistdaten %>% filter(reporter==melder) %>% mutate(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
     select(filepath) %>%  
     map(function(x) read_csv2(file=x,skip=1,locale = locale(encoding = "ISO-8859-1"),
                               col_names= c("stations_id","refjahr","qualitaetsniveau","objekt_id","phasen_id",
@@ -416,16 +424,17 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
     rename(any_of(column_fix_names))
   #%>%  
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
-  copy_to(con, data, "Daten",
+  copy_to(con, data, tabname,
           temporary = FALSE,
           overwrite=TRUE,
           indexes = indexes
   )
-  
+  }
 #### Create megaframe View in database 
   
-  create_megaframe(con) %>% create_view_in_db("Megaframe",con)
-  
+  create_megaframe_melder("Jahresmelder",con) %>% create_view_in_db("Megaframe_Jahresmelder",con)
+  create_megaframe_melder("Sofortmelder",con) %>% create_view_in_db("Megaframe_Sofortmelder",con)
+  create_megaframe(con) %>% create_view_in_db("Megaframe_Allemelder",con)
   DBI::dbDisconnect(con)
   
 #### Deleting Temp Data #### 
@@ -439,4 +448,4 @@ invisible(gc())
 
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
-create_database(dbname="temp/test7.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
+create_database(dbname="temp/test8.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
