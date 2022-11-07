@@ -1,0 +1,72 @@
+---
+title: "RPhaeno Beispiel"
+author: "Lukas Schefczyk"
+date: "7 11 2022"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Einführung
+
+Rphaeno soll ein einfaches Tool zum erstellen einer Phaenologie Datenbank sein auf erstmal DWD-Phänologie Datenbasis.
+
+
+
+Hier einige Beispiele zur Benutzung:
+
+
+Einladen der Skripte:
+
+```{r load-phaeno_scripts,message=FALSE}
+source("load_rphaeno.R")
+```
+
+## Datenbank erstellen
+Als erstes den Namen der Datenbank definieren
+```{r}
+dbname="data/fulldb.sqlite3"
+```
+Die Datenbank kann entweder aus allen Melderdaten bestehen oder nach ausgewählten Pflanzen. 
+
+Die Default-Einstellung der Funktion ist 
+```{r create-database,eval=FALSE}
+create_database(dbname=dbname,temp_dir="temp/",
+                plant=NULL,downloaddata=TRUE,change_nr_names=FALSE,meta_spezifizierung=TRUE,
+                meta_beschreibung=TRUE,keepdldata=TRUE)
+```
+Sollen nur bestimme Pflanzen berücksichtigt werden, so kann der plant Parameter benutzt werden. Hier kann ein Vektor angegeben werden mit Pflanzen die heruntergeladen werden soll. Bspw. c("Birne","Hasel"). Die Abfrage läuft über str_detect, daher werden bspw. alle Birnen Daten genommen (Birne,Birne_fruehe_Reife,Birne_spaete_Reife).
+c("beere") würde bspw. Brombeere, Himbeere, Erdbeere, Johannisbeere, Rote Johannisbeere, Stachelbeere, Schneebeere herunterladen.
+
+Für weitere Erklärungen der Parameter siehe Readme.md
+
+
+#Verbinden der Datenbank
+```{r}
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
+```
+#####  Tabellenliste aus Datenbank
+```{r}
+
+dbListTables(con)
+```
+Die Tabellen sind nach den Dateien des DWD benannt und nach Jahresmelder und Sofortmelder getrennt.
+Die Megaframes sind Views,also aus Tabellen zusammengesetzte Tabelle 
+
+
+##### Tabelle aus Datenbank lesen
+```{r,eval=FALSE}
+Table <- tbl(con,tablename)
+
+```
+
+```{r}
+megaframe <- tbl(con, "Megaframe_Jahresmelder")
+Daten_rlp <- megaframe %>%
+  filter(bundesland %in% c("Rheinland-Pfalz")) %>%
+  collect()
+```
