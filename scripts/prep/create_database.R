@@ -4,20 +4,20 @@ create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",
                              plant=NULL,downloaddata=TRUE,change_nr_names=FALSE,meta_spezifizierung=TRUE,meta_beschreibung=TRUE,
                              keepdldata=TRUE) {
 #### libraries ####   
-  require(tidyverse)
-  require(rvest)
-  require(glue)
-  require(lubridate)
-  require(RSQLite)
-  require(DBI)
-  require(dbplyr)
-  require(sf)
-  
+  # require(tidyverse)
+  # require(rvest)
+  # require(glue)
+  # require(lubridate)
+  # require(RSQLite)
+  # require(DBI)
+  # require(dbplyr)
+  # require(sf)
+   
   if(!is.atomic(plant)) stop("plant should be simple character vector like c(\"Apfel\",\"Eiche\"")
   if( !dbname %>% str_detect("sqlite") ) stop("dbname should be sqlite3 database and end with .sqlite3")
   if( !dir.exists(temp_dir) ) dir.create(temp_dir,recursive = TRUE)
   
-  source("scripts/prep/functions_db.R")
+  #source("scripts/prep/functions_db.R")
   
 #### get filelist ####
   
@@ -448,4 +448,4 @@ invisible(gc())
 
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
-create_database(dbname="temp/test8.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
+#create_database(dbname="temp/test8.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
