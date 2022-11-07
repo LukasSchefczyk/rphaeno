@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.sqlite3
 data/*
 plots/*
 temp/*
