@@ -55,7 +55,7 @@ con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
 dbListTables(con)
 ```
 Die Tabellen sind nach den Dateien des DWD benannt und nach Jahresmelder und Sofortmelder getrennt.
-Die Megaframes sind Views,also aus Tabellen zusammengesetzte Tabelle 
+Die Megaframes sind Views,also aus den Tabellen zusammengesetzte Riesentabelle. 
 
 
 ##### Tabelle aus Datenbank lesen
@@ -66,7 +66,16 @@ Table <- tbl(con,tablename)
 
 ```{r}
 megaframe <- tbl(con, "Megaframe_Jahresmelder")
+megaframe
+```
+
+```{r}
 Daten_rlp <- megaframe %>%
   filter(bundesland %in% c("Rheinland-Pfalz")) %>%
   collect()
+Daten_rlp
+
 ```
+
+
+
