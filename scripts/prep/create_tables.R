@@ -59,3 +59,17 @@ df %>%  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code",clip=NU
   geom_sf(aes(fill=jultag,geometry=geom),show.legend = TRUE) +
   geom_sf(data= df %>% 
             station_df_to_sf() )
+
+
+
+#phaenologische Uhr Phasen 
+# Vorfrühling	Hasel (Blühbeginn)	1992 - Vorjahr
+# Erstfrühling	Forsythie (Blühbeginn)	2001 - Vorjahr
+# Vollfrühling	Apfel (Blühbeginn)	1992 - Vorjahr
+# Frühsommer	Schwarzer Holunder (Blühbeginn)	1992 - Vorjahr
+# Hochsommer	Sommer-Linde (Blühbeginn)	1992 - Vorjahr
+# Spätsommer	Frühreifende Äpfel (Pflückreife)	1992 - Vorjahr
+# Frühherbst	Schwarzer Holunder (Fruchtreife)	1992 - Vorjahr
+# Vollherbst	Stiel-Eiche (Früchte)	2011 - Vorjahr
+# Spätherbst	Stiel-Eiche (Blattverfärbung)	2011 - Vorjahr
+# Winter	Stiel-Eiche (Blattfall)	2011 - Vorjahr

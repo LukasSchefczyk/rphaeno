@@ -4,7 +4,7 @@ author: "Lukas Schefczyk"
 date: "7 11 2022"
 output:
   html_document:
-    df_print: paged
+    df_print: tibble
 ---
 
 ```{r setup, include=FALSE}
@@ -22,7 +22,7 @@ Hier einige Beispiele zur Benutzung:
 
 Einladen der Skripte:
 
-```{r load-phaeno_scripts,message=FALSE}
+```{r load-phaeno_scripts,message=FALSE,warning=FALSE}
 source("load_rphaeno.R")
 ```
 
@@ -49,33 +49,49 @@ Für weitere Erklärungen der Parameter siehe Readme.md
 ```{r}
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
 ```
-#####  Tabellenliste aus Datenbank
+##  Tabellenliste aus Datenbank auslesen
 ```{r}
 
 dbListTables(con)
 ```
 Die Tabellen sind nach den Dateien des DWD benannt und nach Jahresmelder und Sofortmelder getrennt.
-Die Megaframes sind Views,also aus den Tabellen zusammengesetzte Riesentabelle. 
+Die Megaframes sind Views, also aus den Tabellen zusammengesetzte Riesentabelle die aber nur verknüpft sind. 
 
 
-##### Tabelle aus Datenbank lesen
+## Tabelle aus Datenbank lesen
+Um eine Tabelle aus der Datenbank zu lesen gibt benutzt man folgenden Befehl
 ```{r,eval=FALSE}
 Table <- tbl(con,tablename)
 
 ```
+tbl erstellt aus der Datenbankverbindung con und dem zugehörigen Tabellennamen ein lazy-loaded Tabelle.
 
 ```{r}
 megaframe <- tbl(con, "Megaframe_Jahresmelder")
+```
+```{r,eval=FALSE}
 megaframe
 ```
+```{r,echo=TRUE}
+megaframe %>% print(n=10)
+```
+
+
+
 
 ```{r}
 Daten_rlp <- megaframe %>%
-  filter(bundesland %in% c("Rheinland-Pfalz")) %>%
-  collect()
+  filter(bundesland %in% c("Rheinland-Pfalz") & phase_id == 5)
+```
+```{r,eval=FALSE}
 Daten_rlp
-
+```
+```{r,echo=FALSE}
+Daten_rlp %>%  print()
 ```
 
+
+sf feature station 
+sf feature naturraum
 
 
