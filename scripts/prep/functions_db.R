@@ -33,8 +33,8 @@ create_megaframe <- function (con=con) {
   Daten <- union_all(Daten_Sofortmelder,Daten_Jahresmelder)
   Phasendefinition <- tbl(con,"Phasendefinition")
   Phase <- tbl(con,"Phase")
-  Obst_spezi <- tbl(con, "Obst_Spezifizierung")
-  Mais_spezi <- tbl(con, "Mais_Spezifizierung")
+  #Obst_spezi <- tbl(con, "Obst_Spezifizierung")
+  #Mais_spezi <- tbl(con, "Mais_Spezifizierung")
   megaframe <- left_join(Daten,Stationen,by="stations_id") %>%
     left_join(Phasendefinition,by=c("pflanze_id","phase_id")) %>%
     left_join(Phase,by=c("phase","phase_id")) %>%
@@ -85,7 +85,7 @@ print_all <- function (...) {
 nr_df_to_sf <- function(...,col2geom=NULL,geomcol=NULL,clip=NULL) {
   geomcol <- geomcol
   col2geom <- col2geom
-  checknr <- c("naturraum","naturraum_code","naturraumgruppe","naturraumgruppe_code")
+  checknr <- c("naturraum","naturraum_code","naturraumgruppe","naturraumgruppe_code","bundesland")
   if(is.null(geomcol) || !(geomcol %in% checknr)) stop(paste("geomcol needs to be one of",paste(checknr,collapse = ","))) 
   if(is.null(col2geom)) stop("col2geom needs to be defined")                  
   df <- tibble(...)

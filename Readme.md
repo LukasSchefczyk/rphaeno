@@ -138,6 +138,8 @@ naturraum, naturraum_code, naturraumgruppe, naturraumgruppe_code.
 *geomcol* Spaltenname von zu verbindenen Naturraumspalte c("naturraum","naturraum_code","naturraumgruppe","naturraumgruppe_code").
 Aufgrund von Abweichungen der Namen und Ausdehnnugen zwischen DWD und BfN Naturräumen sollten die *_code Spalten zum verknüpfen verwendet werden.
 
+col2geom kann auch das Bundesland sein!
+
 
 
 ### **Datenbank**
