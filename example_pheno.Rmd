@@ -64,7 +64,7 @@ Um eine Tabelle aus der Datenbank zu lesen gibt benutzt man folgenden Befehl
 Table <- tbl(con,tablename)
 
 ```
-tbl erstellt aus der Datenbankverbindung con und dem zugehörigen Tabellennamen ein lazy-loaded Tabelle.
+tbl erstellt aus der Datenbankverbindung con und dem zugehörigen Tabellennamen ein lazy-loaded Tabelle. Erkennbar an den zwei ?? im console output.
 
 ```{r}
 megaframe <- tbl(con, "Megaframe_Jahresmelder")
@@ -78,7 +78,7 @@ megaframe %>% print(n=10)
 
 
 
-
+Um Beispielsweise Daten nur für Rheinland-Pfalz zu erhalten und die Blühphase kann filter() verwendet werden:
 ```{r}
 Daten_rlp <- megaframe %>%
   filter(bundesland %in% c("Rheinland-Pfalz") & phase_id == 5)
@@ -90,8 +90,265 @@ Daten_rlp
 Daten_rlp %>%  print()
 ```
 
+Um diese View für Rheinland-Pfalz mit der Blühphase nun als extra View/Tabelle in die Datenbank zu speichern kann man mit 
+```{r eval=FALSE}
+create_view_in_db(df_query,viewname,con=con)
+```
+dies tun.
+```{r}
+create_view_in_db(Daten_rlp,"RLP_Bluehphase_Jahresmelder",con=con)
+dbListTables(con)
+```
+Die neu angelegte Tabelle ist nun in der Datenbank, und da als View benötigt diese fast kein Speicherplatz nur Rechen- und HDD-Leistung zum Abruf.
 
-sf feature station 
-sf feature naturraum
+Um eine View zu löschen kann 
+```{r,eval=FALSE}
+remove_view_from_db(viewname,con=con)
+```
+verwendet werden. 
+```{r}
+remove_view_from_db("RLP_Bluehphase_Jahresmelder",con=con)
+dbListTables(con)
+```
+
+
+Die Daten sind immernoch nur lazy loaded, um sie nun zu erhalten muss die Query abgeschickt werden mit  collect()
+
+```{r}
+Daten_rlp <- Daten_rlp %>% collect()
+Daten_rlp
+```
+Der Tibble ist nun mit 386,977 Zeilen x 26 Spalten vollstaendig in R geladen. 
+Dies ist wichtig damit die Daten falls gewünscht zu sf objekte anhand von Stationen oder Naturräumen gemacht werden können. Da SQLite kein sf unterstützt müssen die Daten aus der Daten in den Speicher genommen werden. Postgres oder spatialite können damit umgehen, aber es sind keine Treiber installiert.
+
+#### Daten in die Datenbank schreiben 
+
+Um nun statt dem View eine Tabelle in die Datenbank zu schreiben kann mit 
+```{r, eval=FALSE}
+copy_to(con, Daten_rlp, "Daten_rlp_Jahresmelder_Bluehphase",
+        temporary = FALSE,
+        overwrite=TRUE,
+        indexes = list("stations_id","stationsname","bundesland",
+                       "naturraumgruppe_code","naturraumgruppe",
+                       "naturraum_code","naturraum","objekt_id","objekt" ))
+```
+das Tibble in die Datenbank geschrieben werden. (Anmerkung die, chunk-option eval=FALSE, wird also nicht ausgeführt aus Perfomancegründen).
+
+
+
+### Datenbank nach Wunsch-Pflanzen erstellen
+Chunk wird nicht ausgeführt!
+Es können bei der Datenbankerstellung auch nur Pflanzen von Interesse angegeben werden. Um beispielsweise für bestimmte Fragestellungen oder Anfragen einzelne Datensätze zu haben.
+
+```{r,eval=FALSE}
+create_database(dbname="data/smalldb3.sqlite3",temp_dir="temp/",
+                plant=c("Hasel","Forsythie","Apfel","Holunder","Sommer-Linde","Stiel-Eiche"),downloaddata=FALSE,change_nr_names=FALSE,meta_spezifizierung=FALSE,
+                meta_beschreibung=TRUE,keepdldata=TRUE)
+
+```
+
+```{r}
+consmall <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/smalldb3.sqlite3" )
+dbListTables(consmall)
+```
+Da Spezifierungen auf FALSE gesetzt wurde fehlen sämtliche damit zusammenhängende Tabellen.
+
+```{r}
+mfsmall <- tbl(consmall,"Megaframe_Jahresmelder")
+mfsmall %>%  select(pflanze) %>% distinct()
+```
+Holunder wurde erkannt, "Schwarzer Holunder" wäre nicht erkannt worden, "Schwarzer_Holunder" wäre erkannt worden -> Leerzeichen bei Pflanzen mit Unterstrich verbinden ( wie im Original-Dateinamen )
+
+#### Geodaten verwenden
+
+Um Beispielsweise eine Übersichtskarte über die Stationen/Jahresmelder in den DWD Daten zu bekommen. Kann die Stationstabelle benutzt werden.
+
+```{r}
+Stationen <- tbl(con,"Stationen_Jahresmelder")
+```
+```{r,eval=FALSE}
+Stationen
+```
+```{r,echo=FALSE}
+Stationen %>%  print()
+```
+Mit der Funktion station_df_to_sf() können die lat/lon Daten zu einem geom gemacht werden.
+```{r,eval=FALSE}
+station_df_to_sf(...,src_crs=NULL ,tar_crs=NULL,coords_col=NULL,remove=TRUE)
+```
+src_crs und tar_crs muessen nicht angeben werden, als Default Werte wird 4326 für src und 25832 als target angenommen, nur falls die Daten abweichen sollten oder man auf ein anderes Targetcrs wechseln möchte kann man dies angeben. 
+coords_col ist default auf c("lon","lat") gesetzt und muss nur bei abweichung angegeben werden.
+remove gibt an ob die coords_col aus dem sf-Objekt gelöscht werden soll. Default ja.
+
+```{r}
+station_sf <- Stationen %>% 
+  collect() %>% 
+  #hier muss also nicht mehr eingetragen werden
+  station_df_to_sf()
+station_sf %>%  print(10,width=Inf) 
+```
+Es fehlen nun lat/lon dafür haben wir eine geometry spalte und das Objekt ist ein sf-Objekt.
+
+Als Karte plotten:
+```{r}
+station_sf %>% 
+  ggplot() + geom_sf(size=1)
+```
+
+Hier sieht man nun alle Jahresmelder über die gesamte Messzeit in der Datenbank.
+
+Soll nur für Rheinland-Pfalz benutzt werden, muss wieder gefiltert werden:
+
+```{r}
+station_sf %>% 
+  filter(bundesland=="Rheinland-Pfalz") %>% 
+  ggplot() + geom_sf(size=1)
+```
+
+oder auch mehrere Bundesländer:
+
+```{r}
+station_sf %>% 
+  filter(bundesland %in% c("Rheinland-Pfalz","Brandenburg")) %>% 
+  ggplot() + geom_sf(size=1)
+```
+
+Berechnen wir den mittleren Julianischen Tag der Haselblühbeginn zwischen 1991 und 2021 nach Naturräumen gruppiert:
+```{r}
+Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraum_code) %>% 
+  summarize(mean_jultag=mean(jultag))
+```
+Um dies nun als Karte darzustellen muessen wir die Daten wieder mit einer geometry darstellen:
+
+```{r}
+Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraum_code) %>% 
+  summarize(mean_jultag=mean(jultag)) %>% 
+  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code")
+```
+```{r}
+Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraum_code) %>% 
+  summarize(mean_jultag=mean(jultag)) %>% 
+  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code") %>% 
+  ggplot() +
+  geom_sf(aes(fill=mean_jultag,geometry=geom),show.legend = TRUE)
+```
+
+Um nur auf das Bundesland Rheinland-Pfalz zu clippen kann in der nr_df_to_sf das clip argument benutzt werden. Nimmt bisher nur Bundesländer an
+```{r}
+Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraum_code) %>% 
+  summarize(mean_jultag=mean(jultag)) %>% 
+  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code",clip="Rheinland-Pfalz") %>% 
+  ggplot() +
+  geom_sf(aes(fill=mean_jultag,geometry=geom),show.legend = TRUE)
+```
+
+Möchte man nun nach Natturraumgruppe die Daten darstellen wird natturaum_code  zu naturraumgruppe_code geändert:
+```{r}
+Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraumgruppe_code) %>% 
+  summarize(mean_jultag=mean(jultag)) %>% 
+  nr_df_to_sf(col2geom="naturraumgruppe_code",geomcol = "naturraumgruppe_code",clip="Rheinland-Pfalz") %>%
+  ggplot() +
+  geom_sf(aes(fill=mean_jultag,geometry=geom),show.legend = TRUE)
+```
+
+Sollen die Melder hinzugefügt werden muss ein weiteres geom_sf() hinzugefügt werden mit eigenem datastream.
+
+```{r}
+Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraumgruppe_code) %>% 
+  summarize(mean_jultag=mean(jultag)) %>% 
+  nr_df_to_sf(col2geom="naturraumgruppe_code",geomcol = "naturraumgruppe_code",clip="Rheinland-Pfalz") %>%
+  ggplot() +
+  geom_sf(aes(fill=mean_jultag,geometry=geom),show.legend = TRUE) +
+  geom_sf(data= Daten_rlp %>% 
+            filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+            station_df_to_sf())
+```
+
+Um sich nicht zu wiederholen können die gefilteren Daten in ein extra Objekt gespeichert werden.
+Da die Daten die in ggplot gepiped werden andere sind (naturraum) müssen die Stationsdaten extra generiert werden.
+
+```{r}
+datadf <- Daten_rlp %>% 
+  filter(pflanze=="Hasel",refjahr>1990 & refjahr<2022) %>%
+  group_by(naturraumgruppe_code)
+
+datadf %>% 
+  summarize(mean_jultag=mean(jultag)) %>% 
+  nr_df_to_sf(col2geom="naturraumgruppe_code",geomcol = "naturraumgruppe_code",clip="Rheinland-Pfalz") %>%
+  ggplot() +
+  geom_sf(aes(fill=mean_jultag,geometry=geom),show.legend = TRUE) +
+  geom_sf(data= datadf %>%
+            station_df_to_sf())
+```
+
+
+```{r}
+megaframe_Jahresmelder <- tbl(con,"Megaframe_Jahresmelder")
+bld <- c("Rheinland-Pfalz","Brandenburg")
+datadf <- megaframe_Jahresmelder %>% filter(bundesland %in% bld & phase_id==5 & pflanze == "Hasel") %>%  collect() %>% 
+  filter(str_detect(naturraum,regex("saar",ignore_case = TRUE)))
+
+datadf  %>% 
+  nr_df_to_sf(col2geom="naturraum_code",geomcol = "naturraum_code",clip=NULL) %>% 
+  ggplot() +
+  geom_sf(aes(fill=naturraum_code,geometry=geom),show.legend = FALSE) +
+  geom_sf(data= datadf %>%  station_df_to_sf() )
+```
+
+
+
+
+
+
+### Tabellen Header der vollen db  5 Zeilen, alle spalten
+```{r}
+dbListTables(con)
+```
+```{r}
+tbl(con,"Daten_Jahresmelder") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Megaframe_Jahresmelder") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Stationen") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Pflanze") %>% print(5,width=Inf)
+``` 
+```{r}
+tbl(con,"Phasendefinition") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Mais_Spezifizierung") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Weinrebe_Spezifizierung") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Ruebe_Spezifizierung") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Phaenologie_Besonderheiten_Zeitreihen") %>% print(5,width=Inf)
+```
+```{r}
+tbl(con,"Notizen") %>% print(5,width=Inf)
+```
+
+
+
+
 
 
