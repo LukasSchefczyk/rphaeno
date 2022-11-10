@@ -46,7 +46,7 @@ c("beere") würde bspw. Brombeere, Himbeere, Erdbeere, Johannisbeere, Rote Johan
 Für weitere Erklärungen der Parameter siehe Readme.md
 
 
-#Verbinden der Datenbank
+### Verbinden der Datenbank
 ```{r}
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname )
 ```
@@ -73,7 +73,7 @@ megaframe <- tbl(con, "Megaframe_Jahresmelder")
 ```{r,eval=FALSE}
 megaframe
 ```
-```{r,echo=TRUE}
+```{r,echo=FALSE}
 megaframe %>% print(n=10)
 ```
 
