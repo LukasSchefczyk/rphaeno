@@ -5,6 +5,7 @@ date: "7 11 2022"
 output:
   html_document:
     df_print: tibble
+    highlight: pygments
 ---
 
 ```{r setup, include=FALSE}
