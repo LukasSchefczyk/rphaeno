@@ -122,7 +122,7 @@ Daten_rlp
 Der Tibble ist nun mit 386,977 Zeilen x 26 Spalten vollstaendig in R geladen. 
 Dies ist wichtig damit die Daten falls gewünscht zu sf objekte anhand von Stationen oder Naturräumen gemacht werden können. Da SQLite kein sf unterstützt müssen die Daten aus der Daten in den Speicher genommen werden. Postgres oder spatialite können damit umgehen, aber es sind keine Treiber installiert.
 
-#### Daten in die Datenbank schreiben 
+## Daten in die Datenbank schreiben 
 
 Um nun statt dem View eine Tabelle in die Datenbank zu schreiben kann mit 
 ```{r, eval=FALSE}
@@ -137,7 +137,7 @@ das Tibble in die Datenbank geschrieben werden. (Anmerkung die chunk-option ist 
 
 
 
-### Datenbank nach Wunsch-Pflanzen erstellen
+## Datenbank nach Wunsch-Pflanzen erstellen
 Chunk wird nicht ausgeführt!
 Es können bei der Datenbankerstellung auch nur Pflanzen von Interesse angegeben werden. Um beispielsweise für bestimmte Fragestellungen oder Anfragen einzelne Datensätze zu haben.
 
@@ -160,7 +160,7 @@ mfsmall %>%  select(pflanze) %>% distinct()
 ```
 Holunder wurde erkannt, "Schwarzer Holunder" wäre nicht erkannt worden, "Schwarzer_Holunder" wäre erkannt worden -> Leerzeichen bei Pflanzen mit Unterstrich verbinden ( wie im Original-Dateinamen )
 
-#### Geodaten verwenden
+## Geodaten verwenden
 
 Um Beispielsweise eine Übersichtskarte über die Stationen/Jahresmelder in den DWD Daten zu bekommen. Kann die Stationstabelle benutzt werden.
 
