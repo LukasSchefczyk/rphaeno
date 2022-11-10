@@ -132,7 +132,7 @@ copy_to(con, Daten_rlp, "Daten_rlp_Jahresmelder_Bluehphase",
                        "naturraumgruppe_code","naturraumgruppe",
                        "naturraum_code","naturraum","objekt_id","objekt" ))
 ```
-das Tibble in die Datenbank geschrieben werden. (Anmerkung die, chunk-option eval=FALSE, wird also nicht ausgeführt aus Perfomancegründen).
+das Tibble in die Datenbank geschrieben werden. (Anmerkung die chunk-option ist eval=FALSE, wird also nicht ausgeführt aus Perfomancegründen).
 
 
 
@@ -212,6 +212,83 @@ station_sf %>%
   filter(bundesland %in% c("Rheinland-Pfalz","Brandenburg")) %>% 
   ggplot() + geom_sf(size=1)
 ```
+
+Wollen wir nur die aktuell aktiven Stationen sehen oder benutzen müssen wir nach Stationen schauen deren Auflösungsdatum nicht gesetzt ist also NA ist.
+
+```{r}
+aktive_melder_sf <- Stationen %>% 
+  collect() %>% 
+  station_df_to_sf() %>% 
+  filter(is.na(datum_stationsaufloesung))
+
+aktive_melder_sf %>% 
+  filter(bundesland %in% c("Rheinland-Pfalz","Brandenburg")) %>% 
+  ggplot() + geom_sf(size=1)
+
+```
+
+oder Bundesweit 
+```{r}
+Stationen %>% 
+  collect() %>% 
+  station_df_to_sf() %>% 
+  filter(is.na(datum_stationsaufloesung)) %>% 
+  ggplot() + geom_sf(size=1)
+
+```
+
+Möchte man Grenzen hinzu plotten ohne Datenzugehörigkeit kann man das inkludierte GeoPackage benutzen welches auch intern für Naturräume etc benutzt wird.
+
+Einladen des Geopackages
+```{r}
+gfile <- "data/Naturraum_Grenzen_DE.gpkg"
+sf::st_layers(gfile)
+```
+Einladen der Layer 
+```{r}
+bundesland_sf <- read_sf("data/Naturraum_Grenzen_DE.gpkg","bundesland")
+nrg_sf <- read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraumgruppe")
+nr_sf <- read_sf("data/Naturraum_Grenzen_DE.gpkg","naturraum")
+lk_sf <- read_sf("data/Naturraum_Grenzen_DE.gpkg","landkreis")
+staatsgrenze_sf <- read_sf("data/Naturraum_Grenzen_DE.gpkg","staatsgrenze")
+```
+
+Hinzufügen der Grenze:
+
+```{r}
+Stationen %>% 
+  collect() %>% 
+  station_df_to_sf() %>% 
+  filter(is.na(datum_stationsaufloesung)) %>% 
+  ggplot() + 
+  geom_sf(size=1) +
+  geom_sf(data=staatsgrenze_sf,show.legend = FALSE,size=1,color="black",fill=NA)
+```
+
+Wichtig zu beachten bei ggplot ist die Reihenfolge der Aufrufe der einzelnen Geometries. Es wird nach der Reihe geplottet , deswegen sehen wir nur die Staatsgrenze deren Füllung die Stationen verdeckt.
+
+Entweder wir verschieben die Staatsgrenze nach oben:
+```{r}
+Stationen %>% 
+  collect() %>% 
+  station_df_to_sf() %>% 
+  filter(is.na(datum_stationsaufloesung)) %>% 
+  ggplot() + 
+  geom_sf(data=staatsgrenze_sf,show.legend = FALSE,size=1,color="black") +
+  geom_sf(size=1)
+```
+Oder wir setzen die Füllung auf NA , je nachdem was gewünscht ist und was dargestellt werden soll
+```{r}
+Stationen %>% 
+  collect() %>% 
+  station_df_to_sf() %>% 
+  filter(is.na(datum_stationsaufloesung)) %>% 
+  ggplot() + 
+  geom_sf(size=1) +
+  geom_sf(data=staatsgrenze_sf,show.legend = FALSE,size=1,color="black",fill=NA)
+```
+
+### Daten Verknüpfen
 
 Berechnen wir den mittleren Julianischen Tag der Haselblühbeginn zwischen 1991 und 2021 nach Naturräumen gruppiert:
 ```{r}
@@ -317,34 +394,34 @@ datadf  %>%
 dbListTables(con)
 ```
 ```{r}
-tbl(con,"Daten_Jahresmelder") %>% print(5,width=Inf)
+tbl(con,"Daten_Jahresmelder") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Megaframe_Jahresmelder") %>% print(5,width=Inf)
+tbl(con,"Megaframe_Jahresmelder") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Stationen") %>% print(5,width=Inf)
+tbl(con,"Stationen") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Pflanze") %>% print(5,width=Inf)
+tbl(con,"Pflanze") %>% print(n=5,width=Inf)
 ``` 
 ```{r}
-tbl(con,"Phasendefinition") %>% print(5,width=Inf)
+tbl(con,"Phasendefinition") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Mais_Spezifizierung") %>% print(5,width=Inf)
+tbl(con,"Mais_Spezifizierung") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Weinrebe_Spezifizierung") %>% print(5,width=Inf)
+tbl(con,"Weinrebe_Spezifizierung") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Ruebe_Spezifizierung") %>% print(5,width=Inf)
+tbl(con,"Ruebe_Spezifizierung") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Phaenologie_Besonderheiten_Zeitreihen") %>% print(5,width=Inf)
+tbl(con,"Phaenologie_Besonderheiten_Zeitreihen") %>% print(n=5,width=Inf)
 ```
 ```{r}
-tbl(con,"Notizen") %>% print(5,width=Inf)
+tbl(con,"Notizen") %>% print(n=5,width=Inf)
 ```
 
 
