@@ -305,7 +305,7 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
   con <-  DBI::dbConnect(RSQLite::SQLite(), dbname = dbname ,loadable.extensions = TRUE)
   notizendb <- notizen %>% 
     transmute(filepath=glue("{temp_dir}{relpath}{file}")) %>% 
-    map(function(x) {read_csv2(file=x,skip=2,locale = locale(encoding = "ISO-8859-1"),
+    map(function(x) {read_csv2(file=x,skip=3,locale = locale(encoding = "ISO-8859-1"),
                                col_select=-contains(c("...","eor")),show_col_types = FALSE,
                                col_names=c("stations_id","refjahr", "qualitaetsniveau", "objekt_id", 
                                            "objekt", "phasen_id", "phase", "notizen","eor","...1"),
