@@ -2,6 +2,7 @@
 source("scripts/prep/functions_db.R")
 library(RSQLite)
 library(DBI)
+library(ggnewscale)
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/dbtest.sqlite3" )
 
 dbListTables(con)
@@ -125,4 +126,97 @@ plot_data_uhr <- Daten_uhr %>% left_join(uhr_meta ,by=c("pflanze_id","phase_id")
   drop_na(order) %>% 
   summarise(mean_jultag=mean(jultag),count=n()) %>%
   right_join(uhr_meta,by="order") %>% 
-  print_all
+  #right_join(Daten_uhr %>% select(phase_id,phase) %>%  distinct(),by=c("alt_phase_id" = "phase_id")) %>% 
+  #rename(alt_phase=phase) %>% 
+  right_join(Daten_uhr %>% select(phase_id,phase) %>%  distinct(),by="phase_id") 
+  
+   
+plot_data_uhr_2 <- Daten_uhr %>% left_join(uhr_meta ,by=c("pflanze_id","phase_id"))  %>% 
+  filter(refjahr>=1991 & refjahr <=2021) %>%  
+  group_by(order) %>%
+  drop_na(order) %>% 
+  summarise(mean_jultag=mean(jultag),count=n()) %>%
+  right_join(uhr_meta,by="order") %>% 
+  #right_join(Daten_uhr %>% select(phase_id,phase) %>%  distinct(),by=c("alt_phase_id" = "phase_id")) %>% 
+  #rename(alt_phase=phase) %>% 
+  right_join(Daten_uhr %>% select(phase_id,phase) %>%  distinct(),by="phase_id") 
+
+
+# Compute percentages
+p <- plot_data_uhr %>%  mutate(fraction= mean_jultag/365/sum(mean_jultag/365),
+                          ymax=cumsum(fraction),
+                          ymin=c(0, head(ymax, n=-1))) %>% 
+  ggplot() + aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=mean_jultag) +
+  geom_rect() +
+  coord_polar(theta="y",start=0) + 
+  xlim(c(-1, 4))
+png("plots/pietest.png",width = 192*5,height=108*5,type="cairo-png")
+print(p)
+dev.off()
+
+
+p <- plot_data_uhr %>%  mutate(fraction= mean_jultag/365/sum(mean_jultag/365),
+                               ymax=cumsum(fraction),
+                               ymin=c(0, head(ymax, n=-1))) %>% 
+  ggplot(aes(x=1:10,y=fraction, fill=mean_jultag))  +
+  geom_bar(stat="identity") +
+  coord_polar(theta="y",start=0) + 
+  xlim(c(-3, 2))
+ggsave("plots/pietest2.png",device = "png")
+
+
+
+#add overlapping days to beginning of year
+pdata <- bind_rows(plot_data_uhr %>%  slice(n()) %>%  mutate(order=0,mean_jultag=0), plot_data_uhr) %>% 
+  #calc percentages
+  mutate(fraction= mean_jultag/365,
+                            ymax=cumsum(fraction),
+                            ymin=c(0, head(ymax, n=-1)))
+
+pdata <- bind_rows(plot_data_uhr %>%  slice(n()) %>%  mutate(order=10,mean_jultag=0),
+                   plot_data_uhr,
+                   plot_data_uhr %>%  slice(n()) %>%  mutate(order=11,mean_jultag=365)) %>% 
+  #calc percentages
+  mutate(diff_mean_jultag=lead(mean_jultag)-mean_jultag) %>% 
+  drop_na(diff_mean_jultag) %>% 
+  mutate(fraction= diff_mean_jultag,
+         ymax=cumsum(fraction),
+         ymin=c(0, head(ymax, n=-1)),
+         labelPosition=(ymax + ymin) / 2)
+
+pdata2 <- bind_rows(plot_data_uhr_2 %>%  slice(n()) %>%  mutate(order=10,mean_jultag=0),
+                    plot_data_uhr_2,
+                    plot_data_uhr_2 %>%  slice(n()) %>%  mutate(order=11,mean_jultag=365)) %>% 
+  #calc percentages
+  mutate(diff_mean_jultag=lead(mean_jultag)-mean_jultag) %>% 
+  drop_na(diff_mean_jultag) %>% 
+  mutate(fraction= diff_mean_jultag,
+         ymax=cumsum(fraction),
+         ymin=c(0, head(ymax, n=-1)),
+         labelPosition=(ymax + ymin)/2)
+
+caldata <- tibble(daymonth=days_in_month(1:12),monthabb=month.abb) %>% 
+  mutate(ymax=cumsum(daymonth),ymin=c(0, head(ymax, n=-1))) %>% 
+  mutate(order=11) %>% 
+  mutate(labelPosition=(ymax + ymin) / 2)
+
+# make outerlabels
+# Winterlabel together
+  
+p <- pdata %>% 
+  ggplot() + aes(ymax=ymax, ymin=ymin, xmax=8, xmin=4.05, fill=factor(order)) +
+  geom_rect(show.legend = FALSE) +
+  geom_text(x=(8+4.05)/2, aes(y=labelPosition, label=round(diff_mean_jultag)), size=3.5) +
+  geom_rect(data=pdata2,aes(ymax=ymax, ymin=ymin, xmax=4, xmin=0, fill=factor(order)),show.legend = FALSE) +
+  geom_text(data=pdata2,x=(4+0)/2, aes(y=labelPosition, label=round(diff_mean_jultag)), size=3.5) +
+  scale_fill_manual(values=c("10"="blue","1"="darkgreen","2"="green","3"="lightgreen",
+                             "4"="red","5"="orange","6"="magenta","7"="yellow","8"="gold",
+                             "9"="lightyellow","11"="white")) +
+  geom_rect(data=caldata,aes(ymax=ymax, ymin=ymin, xmax=-4, xmin=0,fill=factor(order)),colour="black",show.legend = FALSE) +
+  geom_text(data=caldata, x=-0.9, aes(y=labelPosition, label=monthabb), size=3.5) +
+  coord_polar(theta="y",start=0) + 
+  xlim(c(-5, 8)) +
+  theme_void()
+
+ggsave("plots/pietest2.png",device = "png")
+
