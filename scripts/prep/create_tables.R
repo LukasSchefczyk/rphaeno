@@ -323,14 +323,15 @@ pdata <- pdata %>% mutate(
    ymin==0 ~ NA_character_,
    TRUE ~ smalllabel
  )) %>%  
+       labelPosition=if_else(ymax==365,365,labelPosition) %>% 
 mutate(biglabelPosition=labelPosition,
-       labelPosition=if_else(ymax==365,365,labelPosition),
        biglabel=if_else(ymin==0,glue(""),biglabel)
        ) 
 #make biglabel from data from both rings
-
-
-
+colorring <- c("10"="#2F6EBD","1"="#50612A","2"="#C4D69A","3"="#EAF2DD","4"="#F15A15","5"="#E64A3E","6"="#DC675E","7"="#F7F60E","8"="#E8F5A3","9"="#FBFEC5","11"="#FFFFFF")
+# values=c("10"="blue","1"="darkgreen","2"="green","3"="lightgreen",
+#          "4"="red","5"="orange","6"="magenta","7"="yellow","8"="gold",
+#          "9"="lightyellow","11"="white")
 p <- pdata %>% filter(ring=="aussen") %>% 
   ggplot(aes(ymax=ymax, ymin=ymin, xmax=8, xmin=4.05, fill=factor(order) ) )   +
   geom_rect(show.legend = FALSE) +
@@ -340,14 +341,14 @@ p <- pdata %>% filter(ring=="aussen") %>%
   #geom_text_repel(show.legend = FALSE)+
   geom_rect(data=pdata %>% filter(ring=="innen"),aes(ymax=ymax, ymin=ymin, xmax=4, xmin=0, fill=factor(order)),show.legend = FALSE) +
   geom_text(data=pdata %>% filter(ring=="innen"),x=(4+0)/2, aes(y=labelPosition, label=smalllabel), size=3) +
-  scale_fill_manual(values=c("10"="blue","1"="darkgreen","2"="green","3"="lightgreen",
-                             "4"="red","5"="orange","6"="magenta","7"="yellow","8"="gold",
-                             "9"="lightyellow","11"="white")) +
+  scale_fill_manual(values=colorring) +
   geom_rect(data=caldata,aes(ymax=ymax, ymin=ymin, xmax=-4, xmin=0,fill=factor(order)),colour="black",show.legend = FALSE) +
   geom_text(data=caldata, x=-0.9, aes(y=labelPosition, label=monthabb), size=3) +
   coord_polar(theta="y",start=0) + 
   xlim(c(-5, 12)) +
-  labs(title = "Phaenologische Jahreszeiten für Rheinland-Pfalz", subtitle = glue("lala1<br><span style='color:orange'>lala2</span>"), caption = "My caption")+
+  labs(title = "Phaenologische Jahreszeiten für Rheinland-Pfalz", 
+       subtitle = glue("äußerer Ring zeigt das Mittel 1961-2021<br><span style='color:orange'>innerer Ring zeigt das Mittel 1991-2020</span>"),
+       caption = "Daten: DWD      Darstellung: LfU Rheinland-Pfalz") +
   theme_void() + 
   theme(plot.subtitle = element_markdown(hjust = 0.5),
         plot.title=element_markdown(hjust=0.5))
