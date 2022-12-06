@@ -2,6 +2,9 @@
 #library dependencies
 require(tidyverse)
 require(rvest)
+require(ggnewscale)
+require(ggtext)
+require(ggrepel)
 require(glue)
 require(lubridate)
 require(RSQLite)
