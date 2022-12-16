@@ -130,3 +130,56 @@ p <- pdata %>% filter(ring=="aussen") %>%
         plot.title=element_markdown(hjust=0.5))
 
 ggsave("plots/pietest3_wildpflanze.png",device = "png")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Plotfunktion 2 Ring Uhr
+#XX Userinputs 
+## Metadaten,Daten,Gebiet,Plotoutputname
+
+
+Plot_2ring_Phaenouhr  <- function(daten,metadaten,gebiet,file,zeitraum) {
+  
+}
+
+
+
+uhr_meta <- tibble(pflanze_id=c(113,109,310,129,130,311,129,132,132,132),
+                   pflanze=c("Hasel","Forsythie","Apfel","Schwarzer Holunder","Sommer-Linde","Apfel, frühe Reife","Schwarzer Holunder","Stiel-Eiche","Stiel-Eiche","Stiel-Eiche"),
+                   phase_id=c(5,5,5,5,5,29,62,62,31,32),
+                   jahreszeit=c("Vorfrühling","Erstfrühling","Vollfrühling","Frühsommer","Hochsommer","Spätsommer","Frühherbst","Vollherbst","Spätherbst","Winter"),
+                   alt_pflanze_id=c(127,350,132,121,360,103,119,122,103,313),
+                   alt_pflanze=c("Schneeglöckchen","Stachelbeere","Stiel-Eiche","Robinie","Rote Johannisbeere","Eberesche","Kornelkirsche","Rosskastanie","Eberesche","Apfel, späte Reife"),
+                   alt_phase_id=c(5,4,4,5,29,62,62,62,32,32) ) %>% mutate(order=1:length(pflanze))
+
+uhr_meta_wildpflanzen <- tibble(pflanze_id=c(116,102,132,129,130,103,129,112,123,132),
+                                pflanze=c("Huflattich","Busch-Windröschen","Stiel-Eiche","Schwarzer Holunder","Sommer-Linde","Eberesche","Schwarzer Holunder","Hänge-Birke","Rotbuche","Stiel-Eiche"),
+                                phase_id=c(5,5,4,5,5,62,62,31,32,32),
+                                jahreszeit=c("Vorfrühling","Erstfrühling","Vollfrühling","Frühsommer","Hochsommer","Spätsommer","Frühherbst","Vollherbst","Spätherbst","Winter")) %>%
+  mutate(order=1:length(pflanze))
+
+Daten_uhr <- tbl(con,"Megaframe_Jahresmelder") %>%
+  filter(bundesland %in% "Rheinland-Pfalz" & 
+           pflanze_id %in% !!uhr_meta$pflanze_id &
+           phase_id %in% !!uhr_meta$phase_id ) %>% 
+  collect()
+
+
+
+innenperiode="1961-2021"
+aussenperiode="1991-2021"
+zeitraum=c(innen="1961-2021",aussen="1991-2021")
+

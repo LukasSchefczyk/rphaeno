@@ -5,9 +5,6 @@ library(DBI)
 library(ggnewscale)
 library(ggtext)
 library(ggrepel)
-con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/dbtest.sqlite3" )
-
-dbListTables(con)
 
 con2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test8.sqlite3")
 
@@ -16,7 +13,7 @@ con <- con2
 
 Stationen <- tbl(con2, "Stationen") 
 Pflanze <- tbl(con2, "Pflanze") 
-Daten <- tbl(con2,"Daten")
+#Daten <- tbl(con2,"Daten")
 Daten_Jahresmelder <- tbl(con2,"Daten_Jahresmelder")
 Phasendefinition <- tbl(con2,"Phasendefinition")
 Phase <- Phasendefinition %>%  select(phase_id,phase) %>% arrange(phase_id) %>% distinct() %>%  collect() 
