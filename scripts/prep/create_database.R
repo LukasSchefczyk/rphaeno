@@ -1,6 +1,6 @@
 ## Create Phenodatabase from DWD function
 
-create_database <- function (dbname="temp/temp.sqlite3",temp_dir="temp/",
+create_database <- function (dbname="temp/phenodb_2023.sqlite3",temp_dir="temp/",
                              plant=NULL,downloaddata=TRUE,change_nr_names=FALSE,meta_spezifizierung=TRUE,meta_beschreibung=TRUE,
                              keepdldata=TRUE) {
 #### libraries ####   
@@ -193,6 +193,10 @@ column_fix_names<- c(pflanze_id = "objekt_id", pflanze = "objekt",
         lala <- lala %>%  mutate(objekt_latein=lead(objekt_id,1)) %>%
           drop_na() #%>% 
         # mutate(objekt_id=as.integer(objekt_id))
+      }
+      #Fix fuer typo des DWD t fehlt in der Tabelle bei qualitaetsbyte ( in file qualiaetsbyte)
+      if(df$tablename =="Phaenologie_Qualitaetsbyte")  {
+        if(any(names(lala) %in% "qualiaetsbyte")) lala <- lala %>%  rename(qualitaetsbyte=qualiaetsbyte) 
       }
       
       #change type to int and rename columnnames 
@@ -448,4 +452,3 @@ invisible(gc())
 
 #create_database(downloaddata = FALSE)
 #create_database(dbname="data/test.sqlite3",temp_dir = "lala/",keepdldata = TRUE ,downloaddata=TRUE,meta_spezifizierung = FALSE,plant=c("Birne"))
-#create_database(dbname="temp/test8.sqlite3",temp_dir = "temp/",keepdldata = TRUE ,downloaddata=FALSE,meta_spezifizierung = TRUE)
