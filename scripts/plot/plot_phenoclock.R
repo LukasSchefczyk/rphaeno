@@ -22,8 +22,8 @@ Daten_uhr <- tbl(con,"Megaframe_Jahresmelder") %>%
 
 
 
-innenperiode="1961-2021"
-aussenperiode="1991-2021"
+innenperiode="1961-1990"
+aussenperiode="1993-2023"
 
 
 add_year_order <- function(df) {
@@ -66,8 +66,8 @@ caldata <- tibble(daymonth=days_in_month(1:12),
   mutate(order=11) %>% 
   mutate(labelPosition=(ymax + ymin) / 2)
 
-plot_data_uhr <- bind_rows(make_ring_data(Daten_uhr,uhr_meta,zeitraum="1961-2021",ring="innen"),
-                           make_ring_data(Daten_uhr,uhr_meta,zeitraum="1991-2021",ring="aussen"))
+plot_data_uhr <- bind_rows(make_ring_data(Daten_uhr,uhr_meta,zeitraum="1961-1990",ring="innen"),
+                           make_ring_data(Daten_uhr,uhr_meta,zeitraum="1993-2023",ring="aussen"))
 ## Labels erstellen/fixen
 pdata <- plot_data_uhr %>% 
   # mutate(biglabel=as.Date("2021-01-01") + mean_jultag) %>% 
@@ -129,7 +129,7 @@ p <- pdata %>% filter(ring=="aussen") %>%
   theme(plot.subtitle = element_markdown(hjust = 0.5),
         plot.title=element_markdown(hjust=0.5))
 
-ggsave("plots/pietest3_wildpflanze.png",device = "png")
+ggsave("plots/Phenouhr_Kulturpflanze_2023.png",device = "png",dpi = 300)
 
 
 

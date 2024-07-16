@@ -1,6 +1,8 @@
 ## Plots für Phenobericht 
 source("load_rphaeno.R")
 
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/Phenodb_2023.sqlite3")
+
 ##doppelt-phänologische Uhr der Wildpflanzen für RLP
 #letzte 30 Jahre (1994-2023) gegenüber 1951-1980 und 1961-1990
 
@@ -47,7 +49,7 @@ rotbuchefix <- temp %>% filter(phase_id==31,refjahr<=1990)  %>%
 
 
 #load db and data for rlp
-con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "temp/test8.sqlite3")
+#con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/Phenodb_2023.sqlite3")
 
 dbListTables(con)
 
@@ -254,6 +256,116 @@ ggsave("plots/PhenoUhr_2Ringe_1961-1990_1994-2023_Wildpflanze.png",device = "png
 
 
 
+########## Phenouhr Kulturpflanze
+
+uhr_meta <- tibble(pflanze_id=c(113,109,310,129,130,311,129,132,132,132),
+                   pflanze=c("Hasel","Forsythie","Apfel","Schwarzer Holunder","Sommer-Linde","Apfel, frühe Reife","Schwarzer Holunder","Stiel-Eiche","Stiel-Eiche","Stiel-Eiche"),
+                   phase_id=c(5,5,5,5,5,29,62,62,31,32),
+                   jahreszeit=c("Vorfrühling","Erstfrühling","Vollfrühling","Frühsommer","Hochsommer","Spätsommer","Frühherbst","Vollherbst","Spätherbst","Winter"),
+                   alt_pflanze_id=c(127,350,132,121,360,103,119,122,103,313),
+                   alt_pflanze=c("Schneeglöckchen","Stachelbeere","Stiel-Eiche","Robinie","Rote Johannisbeere","Eberesche","Kornelkirsche","Rosskastanie","Eberesche","Apfel, späte Reife"),
+                   alt_phase_id=c(5,4,4,5,29,62,62,62,32,32) ) %>% mutate(order=1:length(pflanze))
+
+
+
+
+
+Daten_uhr <- tbl(con,"Megaframe_Jahresmelder") %>%
+  filter(bundesland %in% "Rheinland-Pfalz" & 
+           pflanze_id %in% !!uhr_meta$pflanze_id &
+           phase_id %in% !!uhr_meta$phase_id ) %>% 
+  collect() %>% 
+  #fix für Stieleiche 
+  full_join(stieleichefix) #%>% 
+  #full_join(rotbuchefix)
+
+
+#Prep Data 
+innenperiode="1961-1990"
+aussenperiode="1994-2023"
+
+
+
+
+
+plot_data_uhr <- bind_rows(make_ring_data(Daten_uhr,uhr_meta,zeitraum="1961-1990",ring="innen"),
+                           make_ring_data(Daten_uhr,uhr_meta,zeitraum="1994-2023",ring="aussen"))
+
+
+
+## Labels erstellen/fixen
+pdata <- plot_data_uhr %>% 
+  # mutate(biglabel=as.Date("2021-01-01") + mean_jultag) %>% 
+  #  mutate(biglabel=glue("{jahreszeit}<br>{pflanze}<br>({phase})<br>{day(biglabel)}.{month(biglabel)} / <span style='color:orange'>{day(biglabel)}.{month(biglabel)}</span>" )) %>% 
+  mutate(biglabel=as.Date("2023-01-01") + mean_jultag) %>% 
+  group_by(order) %>% 
+  mutate(biglabeldatum = paste0(glue("{day(biglabel)}.{month(biglabel)}"), collapse = "/"))  %>% 
+  ungroup() %>% 
+  mutate(biglabeldatum=str_extract(biglabeldatum,"^([^/]*/){1}[^/]*")) %>% 
+  separate(biglabeldatum,c("biglabaussen","biglabinnen"),"/") %>%
+  mutate(biglabel=glue("{jahreszeit}<br>{pflanze}<br>({phase})<br>{biglabaussen} / <span style='color:orange'>{biglabinnen}</span>" )) %>% 
+  select(-biglabinnen,-biglabaussen) %>% 
+  group_by(order,ring) %>% 
+  mutate(smalllabel=as.character(round(sum(diff_mean_jultag))),
+         smalllabel=if_else(order==10,paste0(zeitraum,"\n",smalllabel," Tage"),smalllabel)) %>%  
+  ungroup()
+
+smalllabelwinter <- plot_data_uhr %>% group_by(ring) %>% filter(ymin==0 | ymax==365) %>% summarise(summe=sum(diff_mean_jultag))  
+pdata <- pdata %>% 
+  mutate(
+    smalllabel=case_when(
+      ymax==365 && ring=="aussen" ~ smalllabelwinter %>%
+        filter(ring=="aussen") %>%
+        select(summe) %>% pull %>% as.character() ,
+      ymax==365 && ring=="innen" ~ smalllabelwinter %>%
+        filter(ring=="innen") %>%
+        select(summe) %>% pull %>% as.character(),
+      ymin==0 ~ NA_character_,
+      TRUE ~ smalllabel
+    )) %>%  
+  mutate(labelPosition=if_else(ymax==365,365,labelPosition)) %>% 
+  mutate(biglabelPosition=labelPosition,
+         biglabel=if_else(ymin==0,glue(""),biglabel)) 
+
+
+#make biglabel from data from both rings
+colorring <- c("10"="#2F6EBD","1"="#50612A","2"="#C4D69A","3"="#EAF2DD","4"="#F15A15","5"="#E64A3E","6"="#DC675E","7"="#F7F60E","8"="#E8F5A3","9"="#FBFEC5","11"="#FFFFFF")
+# values=c("10"="blue","1"="darkgreen","2"="green","3"="lightgreen",
+#          "4"="red","5"="orange","6"="magenta","7"="yellow","8"="gold",
+#          "9"="lightyellow","11"="white")
+p <- pdata %>% filter(ring=="aussen") %>% 
+  ggplot(aes(ymax=ymax, ymin=ymin, xmax=8, xmin=4.05, fill=factor(order) ) )   +
+  geom_rect(show.legend = FALSE) +
+  geom_text(x=(8+4.05)/2, aes(y=labelPosition, label=smalllabel), size=3) +
+  #geom_text(x=12.5,xlim = c(NA,12),aes(y=biglabelPosition, label=biglabel),size=2.5,show.legend = FALSE)+
+  geom_richtext(x=12.5,aes(y=biglabelPosition, label=biglabel),size=3,show.legend = FALSE, fill = NA, label.color = NA)+
+  #geom_text_repel(show.legend = FALSE)+
+  geom_rect(data=pdata %>% filter(ring=="innen"),aes(ymax=ymax, ymin=ymin, xmax=4, xmin=0, fill=factor(order)),show.legend = FALSE) +
+  geom_text(data=pdata %>% filter(ring=="innen"),x=(4+0)/2, aes(y=labelPosition, label=smalllabel), size=3) +
+  scale_fill_manual(values=colorring) +
+  geom_rect(data=caldata,aes(ymax=ymax, ymin=ymin, xmax=-4, xmin=0,fill=factor(order)),colour="black",show.legend = FALSE) +
+  geom_text(data=caldata, x=-0.9, aes(y=labelPosition, label=monthabb), size=3) +
+  coord_polar(theta="y",start=0) + 
+  xlim(c(-5, 12)) +
+  labs(title = "Phaenologische Jahreszeiten für Rheinland-Pfalz", 
+       subtitle = glue("äußerer Ring zeigt das Mittel 1994-2023<br><span style='color:orange'>innerer Ring zeigt das Mittel 1961-1990</span>"),
+       caption = "Daten: DWD      Darstellung: LfU Rheinland-Pfalz") +
+  theme_void() + 
+  theme(plot.subtitle = element_markdown(hjust = 0.5),
+        plot.title=element_markdown(hjust=0.5))
+
+ggsave("plots/PhenoUhr_2Ringe_1961-1990_1994-2023_Kulturpflanze.eps",device = "eps",width=2100,height=2100 ,units = "px",dpi=300)
+#ggsave("plots/PhenoUhr_2Ringe_1961-1990_1994-2023_Kulturpflanze_pixel.png",device = "png",width=1300,height=1300 ,units = "px")
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -263,6 +375,24 @@ ggsave("plots/PhenoUhr_2Ringe_1961-1990_1994-2023_Wildpflanze.png",device = "png
 
 Phasendefinition <- tbl(con,"Phasendefinition")
 
+
+prep_data_for_timeseries <- function(pflanzeid,phaseid,land) {
+  daten <- tbl(con,"Megaframe_Jahresmelder") %>%
+    filter(bundesland %in% land & 
+             pflanze_id == pflanzeid &
+             phase_id == phaseid) %>% 
+    collect()
+  return(
+    daten %>% 
+      group_by(pflanze_id,refjahr) %>%
+      summarise(mean_jultag=mean(jultag),min_jultag=min(jultag),max_jultag=max(jultag),
+                median_jultag=median(jultag),mean_Melderanzahl=mean(n_distinct(stations_id)),
+                phase_id=phase_id,phase,pflanze) %>% 
+      ungroup() %>% 
+      mutate(refjahr = as.Date(as.character(refjahr),format="%Y")) %>%
+      complete(refjahr = seq.Date(min(refjahr), max(refjahr), by="year"))
+  )
+  
 
 #Apfelblüte
 
@@ -439,22 +569,129 @@ for (var in c("mean_jultag")) {
 }
 
 
-prep_data_for_timeseries <- function(pflanzeid,phaseid,land) {
-  daten <- tbl(con,"Megaframe_Jahresmelder") %>%
-    filter(bundesland %in% land & 
-             pflanze_id == pflanzeid &
-             phase_id == phaseid) %>% 
-    collect()
-  return(
-    daten %>% 
-    group_by(pflanze_id,refjahr) %>%
-    summarise(mean_jultag=mean(jultag),min_jultag=min(jultag),max_jultag=max(jultag),
-              median_jultag=median(jultag),mean_Melderanzahl=mean(n_distinct(stations_id)),
-              phase_id=phase_id,phase,pflanze) %>% 
-    ungroup() %>% 
-    mutate(refjahr = as.Date(as.character(refjahr),format="%Y")) %>%
-    complete(refjahr = seq.Date(min(refjahr), max(refjahr), by="year"))
-    )
 
 } 
 
+
+
+## Bluehbeginn Busch-Windröschen
+
+daten <- prep_data_for_timeseries(102,5,"Rheinland-Pfalz")
+range(daten$mean_jultag)
+for (var in c("mean_jultag")) {
+  png(filename=paste0("plots/Blüte_Beginn_Buschwindroeschen_Zeitreihe_",var,".png"),type="cairo-png",width=2000,height=1000)
+  
+  print(ggplot(data=daten, aes(x=refjahr,y=.data[[var]])) +  
+          geom_line(aes(color=pflanze),lwd=1.2,na.rm = TRUE) +
+          geom_point() +
+          geom_smooth(method=lm,se = FALSE)+
+          scale_y_continuous(limits = c(70, 130), breaks = seq(70, 130, 10)) +
+          theme_grey(base_size = 22) +
+          theme(   legend.key.size=unit(2, 'cm'),legend.background=element_blank(),
+                   legend.key.height=unit(1.2, 'cm')) +
+          labs(x="Jahr",
+               y="Mittlerer julianischer Tag",
+               color="Pflanze",
+               title="Mittlerer julianischer Tag des Blütenbeginns des Busch-Windröschen in Rheinland-Pfalz ")
+  )#print
+  dev.off()
+}
+
+## Bluehbeginn Hasel  
+
+daten <- prep_data_for_timeseries(113,5,"Rheinland-Pfalz")
+range(daten$mean_jultag)
+for (var in c("mean_jultag")) {
+  png(filename=paste0("plots/Blüte_Beginn_Hasel_Zeitreihe_",var,".png"),type="cairo-png",width=2000,height=1000)
+  
+  print(ggplot(data=daten, aes(x=refjahr,y=.data[[var]])) +  
+          geom_line(aes(color=pflanze),lwd=1.2,na.rm = TRUE) +
+          geom_point() +
+          geom_smooth(method=lm,se = FALSE)+
+          scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
+          theme_grey(base_size = 22) +
+          theme(   legend.key.size=unit(2, 'cm'),legend.background=element_blank(),
+                   legend.key.height=unit(1.2, 'cm')) +
+          labs(x="Jahr",
+               y="Mittlerer julianischer Tag",
+               color="Pflanze",
+               title="Mittlerer julianischer Tag des Blütenbeginns der Hasel in Rheinland-Pfalz ")
+  )#print
+  dev.off()
+}
+
+## Bluehbeginn Flieder
+daten <- prep_data_for_timeseries(108,5,"Rheinland-Pfalz")
+range(daten$mean_jultag)
+for (var in c("mean_jultag")) {
+  png(filename=paste0("plots/Blüte_Beginn_Flieder_Zeitreihe_",var,".png"),type="cairo-png",width=2000,height=1000)
+  
+  print(ggplot(data=daten, aes(x=refjahr,y=.data[[var]])) +  
+          geom_line(aes(color=pflanze),lwd=1.2,na.rm = TRUE) +
+          geom_point() +
+          geom_smooth(method=lm,se = FALSE)+
+          scale_y_continuous(limits = c(90, 150), breaks = seq(90, 150, 10)) +
+          theme_grey(base_size = 22) +
+          theme(   legend.key.size=unit(2, 'cm'),legend.background=element_blank(),
+                   legend.key.height=unit(1.2, 'cm')) +
+          labs(x="Jahr",
+               y="Mittlerer julianischer Tag",
+               color="Pflanze",
+               title="Mittlerer julianischer Tag des Blütenbeginns des Flieder in Rheinland-Pfalz ")
+  )#print
+  dev.off()
+}
+
+## Blattverfaerbung Stieleiche
+
+daten <- prep_data_for_timeseries(132,31,"Rheinland-Pfalz")
+range(daten$mean_jultag)
+for (var in c("mean_jultag")) {
+  png(filename=paste0("plots/Blattverfaerbung_Stieleiche_Zeitreihe_",var,".png"),type="cairo-png",width=2000,height=1000)
+  
+  print(ggplot(data=daten, aes(x=refjahr,y=.data[[var]])) +  
+          geom_line(aes(color=pflanze),lwd=1.2,na.rm = TRUE) +
+          geom_point() +
+          geom_smooth(method=lm,se = FALSE)+
+          scale_y_continuous(limits = c(260, 300), breaks = seq(260, 300, 10)) +
+          theme_grey(base_size = 22) +
+          theme(   legend.key.size=unit(2, 'cm'),legend.background=element_blank(),
+                   legend.key.height=unit(1.2, 'cm')) +
+          labs(x="Jahr",
+               y="Mittlerer julianischer Tag",
+               color="Pflanze",
+               title="Mittlerer julianischer Tag des Beginns der Blattverfaerbung der Stiel-Eiche in Rheinland-Pfalz ")
+  )#print
+  dev.off()
+}
+
+#Länge der Vegetationszeit (Bluehbeginn Salweide und Blattverfaerbung Stieleiche)
+
+#Daten Sal-Weide
+daten_salweide <- prep_data_for_timeseries(124,5,"Rheinland-Pfalz") %>%  group_by(refjahr) %>%  summarise(mean_jultag=mean(mean_jultag))
+
+
+#Daten Stieleiche
+daten_stiel <- prep_data_for_timeseries(132,31,"Rheinland-Pfalz") %>%  group_by(refjahr) %>%  summarise(mean_jultag=mean(mean_jultag))
+#zeitachse <- 
+daten <- (daten_stiel - daten_salweide ) %>% mutate(refjahr=daten_stiel$refjahr,pflanze="Sal-Weide/Stiel-Eiche")
+
+
+for (var in c("mean_jultag")) {
+  png(filename=paste0("plots/Laenge_Vegetationszeit_Salweide_Stieleiche_Zeitreihe_",var,".png"),type="cairo-png",width=2000,height=1000)
+  
+  print(ggplot(data=daten, aes(x=refjahr,y=.data[[var]])) +  
+          geom_line(aes(color=pflanze),lwd=1.2,na.rm = TRUE) +
+          geom_point() +
+          geom_smooth(method=lm,se = FALSE)+
+          scale_y_continuous(limits = c(180, 250), breaks = seq(180, 250, 10)) +
+          theme_grey(base_size = 22) +
+          theme(   legend.key.size=unit(2, 'cm'),legend.background=element_blank(),
+                   legend.key.height=unit(1.2,  'cm')) +
+          labs(x="Jahr",
+               y="Mittlere Länge Vegetationszeit",
+               color="Vegetationszeit",
+               title="Mittlere Länge der Vegetationszeit von Blühbeginn Sal-Weide bis Beginns der Blattverfaerbung der Stiel-Eiche in Rheinland-Pfalz ")
+  )#print
+  dev.off()
+}
