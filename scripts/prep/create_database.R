@@ -1,6 +1,6 @@
 ## Create Phenodatabase from DWD function
 
-create_database <- function (dbname="temp/phenodb_2023.sqlite3",temp_dir="temp/",
+create_database <- function (dbname="temp/phenodb_202407.sqlite3",temp_dir="temp/",
                              plant=NULL,downloaddata=TRUE,change_nr_names=FALSE,meta_spezifizierung=TRUE,meta_beschreibung=TRUE,
                              keepdldata=TRUE) {
 #### libraries ####   
